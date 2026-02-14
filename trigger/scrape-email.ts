@@ -1,0 +1,163 @@
+import { task, logger } from "@trigger.dev/sdk/v3";
+import { getBrowserForScraping, isOxylabsConfigured } from "./browser-use";
+import {
+  randomDelay,
+  isCloudflareSecurityPage,
+  waitForCloudflareChallengeToBeSolved,
+} from "./playwright-browser";
+import { insertEmail, incrementScrapedCount } from "../lib/supabase";
+
+interface ScrapeEmailPayload {
+  emailUrl: string;
+  brandName: string;
+  jobId: string;
+}
+
+export const scrapeEmailTask = task({
+  id: "scrape-email",
+  maxDuration: 600, // 10 minutes max per email
+  queue: {
+    // 1 at a time to stay within Browser Use Cloud concurrent session limit (avoids 429)
+    concurrencyLimit: 1,
+  },
+  run: async (payload: ScrapeEmailPayload) => {
+    const { emailUrl, brandName, jobId } = payload;
+
+    logger.log(`[scrape-email]: Starting scrape for URL: ${emailUrl}`);
+
+    const { browser, close: closeBrowser } = await getBrowserForScraping();
+    if (process.env.BROWSER_USE_API_KEY && !isOxylabsConfigured()) {
+      logger.log("[scrape-email]: Using Browser Use Cloud for this email page");
+    }
+
+    try {
+      const page = await browser.newPage();
+
+      // Navigate to email page
+      logger.log(`[scrape-email]: Navigating to ${emailUrl}`);
+
+      const gotoTimeoutMs = isOxylabsConfigured() ? 90_000 : 30_000;
+      await page.goto(emailUrl, {
+        waitUntil: "domcontentloaded",
+        timeout: gotoTimeoutMs,
+      });
+
+      // Random human-like delay before extracting
+      await randomDelay(1000, 4000);
+
+      // Check for Cloudflare "Verify you are human" security page
+      const hitSecurityPage = await isCloudflareSecurityPage(page);
+      const emailcellTimeoutMs = hitSecurityPage ? 90_000 : 10_000;
+      if (hitSecurityPage) {
+        logger.log(
+          "[scrape-email]: Cloudflare challenge detected. Waiting for Browser Use to solve it (up to 90s) before looking for #emailcell..."
+        );
+      }
+
+      // Wait for the emailcell div to be present (longer timeout if we hit Cloudflare)
+      logger.log("[scrape-email]: Waiting for #emailcell to load");
+
+      try {
+        await page.waitForSelector("#emailcell", { timeout: emailcellTimeoutMs });
+      } catch {
+        if (hitSecurityPage) {
+          throw new Error(
+            "Hit Cloudflare security page; challenge was not solved in time (no #emailcell after 90s)."
+          );
+        }
+        throw new Error("Failed to find #emailcell on the page.");
+      }
+
+      // Check if site is still showing Cloudflare after reaching the page (e.g. challenge appeared or page is blocked)
+      let stillCloudflare = await isCloudflareSecurityPage(page);
+      if (stillCloudflare) {
+        logger.log(
+          "[scrape-email]: Cloudflare still present after #emailcell loaded. Waiting for challenge to clear..."
+        );
+        const solved = await waitForCloudflareChallengeToBeSolved(page, {
+          timeoutMs: 90_000,
+        });
+        if (!solved) {
+          throw new Error(
+            "Page still protected by Cloudflare after waiting; email content not extracted."
+          );
+        }
+        stillCloudflare = await isCloudflareSecurityPage(page);
+        if (stillCloudflare) {
+          throw new Error(
+            "Cloudflare challenge did not clear in time; skipping this email."
+          );
+        }
+      }
+
+      // Extract the email HTML
+      logger.log("[scrape-email]: Extracting email content");
+
+      const emailData = await page.evaluate(() => {
+        const emailCell = document.querySelector("#emailcell");
+
+        if (!emailCell) {
+          return null;
+        }
+
+        // Get the outer HTML including the shadow root content
+        // The shadow root template is already in the HTML as <template shadowrootmode="open">
+        const emailHtml = emailCell.outerHTML;
+
+        // Try to extract subject from page title or meta tags
+        let subject =
+          document.title ||
+          document
+            .querySelector('meta[property="og:title"]')
+            ?.getAttribute("content") ||
+          "";
+
+        // Clean up the subject
+        subject = subject.replace(" - Milled", "").trim();
+
+        return {
+          emailHtml,
+          subject,
+        };
+      });
+
+      await page.close();
+
+      if (!emailData || !emailData.emailHtml) {
+        throw new Error("Failed to extract email HTML");
+      }
+
+      logger.log(
+        `[scrape-email]: Extracted ${emailData.emailHtml.length} characters of HTML`
+      );
+
+      // Insert into database
+      logger.log("[scrape-email]: Saving to database");
+
+      await insertEmail({
+        job_id: jobId,
+        brand_name: brandName,
+        email_url: emailUrl,
+        email_subject: emailData.subject || null,
+        email_html: emailData.emailHtml,
+      });
+
+      // Increment scraped count
+      await incrementScrapedCount(jobId);
+
+      logger.log("[scrape-email]: Successfully saved email to database");
+
+      return {
+        success: true,
+        emailUrl,
+        emailLength: emailData.emailHtml.length,
+        subject: emailData.subject,
+      };
+    } catch (error) {
+      logger.error(`[scrape-email]: Error scraping ${emailUrl}: ${error}`);
+      throw error;
+    } finally {
+      await closeBrowser();
+    }
+  },
+});
