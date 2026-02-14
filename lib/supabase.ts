@@ -1,24 +1,7 @@
 import { createClient } from "@supabase/supabase-js";
+import type { ScrapeJob, Email, JobLog, JobLogLevel } from "./types";
 
-// Database types
-export interface ScrapeJob {
-  id: string;
-  brand_name: string;
-  status: "pending" | "running" | "completed" | "failed";
-  total_emails: number;
-  scraped_emails: number;
-  created_at: string;
-}
-
-export interface Email {
-  id: string;
-  job_id: string;
-  brand_name: string;
-  email_url: string;
-  email_subject: string | null;
-  email_html: string;
-  scraped_at: string;
-}
+export type { ScrapeJob, Email, JobLog } from "./types";
 
 // Initialize Supabase client
 const supabaseUrl = process.env.SUPABASE_URL;
@@ -86,13 +69,16 @@ export async function incrementScrapedCount(jobId: string): Promise<void> {
   }
 }
 
+/** PostgreSQL unique violation (e.g. duplicate email_url) */
+const UNIQUE_VIOLATION_CODE = "23505";
+
 export async function insertEmail(email: {
   job_id: string;
   brand_name: string;
   email_url: string;
   email_subject: string | null;
   email_html: string;
-}): Promise<Email> {
+}): Promise<{ email: Email } | { duplicate: true }> {
   const { data, error } = await supabase
     .from("emails")
     .insert(email)
@@ -100,10 +86,13 @@ export async function insertEmail(email: {
     .single();
 
   if (error) {
+    if (error.code === UNIQUE_VIOLATION_CODE) {
+      return { duplicate: true };
+    }
     throw new Error(`Failed to insert email: ${error.message}`);
   }
 
-  return data as Email;
+  return { email: data as Email };
 }
 
 export async function getJobs(): Promise<ScrapeJob[]> {
@@ -159,4 +148,38 @@ export async function getEmailById(id: string): Promise<Email | null> {
   }
 
   return data as Email;
+}
+
+export async function insertJobLog(
+  jobId: string,
+  log: { source: string; message: string; level?: JobLogLevel }
+): Promise<JobLog | null> {
+  const { data, error } = await supabase
+    .from("job_logs")
+    .insert({
+      job_id: jobId,
+      source: log.source,
+      message: log.message,
+      level: log.level ?? "info",
+    })
+    .select()
+    .single();
+
+  if (error) {
+    return null;
+  }
+  return data as JobLog;
+}
+
+export async function getJobLogs(jobId: string): Promise<JobLog[]> {
+  const { data, error } = await supabase
+    .from("job_logs")
+    .select("*")
+    .eq("job_id", jobId)
+    .order("created_at", { ascending: true });
+
+  if (error) {
+    return [];
+  }
+  return (data ?? []) as JobLog[];
 }

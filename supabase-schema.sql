@@ -8,7 +8,8 @@ CREATE TABLE IF NOT EXISTS scrape_jobs (
   status TEXT NOT NULL DEFAULT 'pending',
   total_emails INTEGER DEFAULT 0,
   scraped_emails INTEGER DEFAULT 0,
-  created_at TIMESTAMPTZ DEFAULT NOW()
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  trigger_run_id TEXT
 );
 
 -- Create emails table
@@ -16,7 +17,7 @@ CREATE TABLE IF NOT EXISTS emails (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   job_id UUID NOT NULL REFERENCES scrape_jobs(id) ON DELETE CASCADE,
   brand_name TEXT NOT NULL,
-  email_url TEXT NOT NULL UNIQUE,
+  email_url TEXT NOT NULL,
   email_subject TEXT,
   email_html TEXT,
   scraped_at TIMESTAMPTZ DEFAULT NOW()

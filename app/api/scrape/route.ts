@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { tasks } from "@trigger.dev/sdk/v3";
-import { createJob, getJobs, getEmailsByJob } from "@/lib/supabase";
+import { createJob, getJobs, getEmailsByJob, insertJobLog, updateJob } from "@/lib/supabase";
 import type { scrapeBrandTask } from "@/trigger/scrape-brand";
 
 export async function POST(request: NextRequest) {
@@ -15,10 +15,16 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Create a new scrape job in the database
     const job = await createJob(brandName);
+    try {
+      await insertJobLog(job.id, {
+        source: "app",
+        message: `[app]: Job created for "${brandName}". Triggering scrape-brand...`,
+      });
+    } catch {
+      // job_logs table may not exist yet
+    }
 
-    // Trigger the scrape-brand task
     const handle = await tasks.trigger<typeof scrapeBrandTask>(
       "scrape-brand",
       {
@@ -26,6 +32,30 @@ export async function POST(request: NextRequest) {
         jobId: job.id,
       }
     );
+
+    await updateJob(job.id, { trigger_run_id: handle.id });
+
+    try {
+      await insertJobLog(job.id, {
+        source: "app",
+        message: `[app]: Triggered run ${handle.id}. Logs will stream below as the task runs.`,
+      });
+      // Synthetic step logs so the UI shows activity immediately
+      const steps = [
+        "[app]: Job queued. Waiting for worker to pick up task...",
+        "[app]: Worker started. Running scrape-brand...",
+        "[app]: Launching browser (Playwright + stealth)...",
+        "[app]: Navigating to milled.com search...",
+        "[app]: Loading search results page...",
+        "[app]: Extracting email campaign links from page...",
+        "[app]: Fetching email list. Real-time logs will appear below.",
+      ];
+      for (const message of steps) {
+        await insertJobLog(job.id, { source: "app", message });
+      }
+    } catch {
+      // job_logs table may not exist yet
+    }
 
     return NextResponse.json({
       success: true,

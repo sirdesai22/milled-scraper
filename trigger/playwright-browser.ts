@@ -101,10 +101,18 @@ tasks.onResume("playwright-browser", async () => {
   logger.log("[Playwright]: Browser relaunched (onResume)");
 });
 
+type SendLogFn = (source: string, message: string, level?: "info" | "warn") => void;
+
 // Helper function to add random delay (human-like behavior)
-export async function randomDelay(minMs: number, maxMs: number): Promise<void> {
+export async function randomDelay(
+  minMs: number,
+  maxMs: number,
+  sendLog?: SendLogFn
+): Promise<void> {
   const delay = Math.floor(Math.random() * (maxMs - minMs + 1)) + minMs;
-  logger.log(`[Playwright]: Random delay of ${delay}ms`);
+  const msg = `[Playwright]: Random delay of ${delay}ms`;
+  logger.log(msg);
+  sendLog?.("Playwright", msg);
   await new Promise((resolve) => setTimeout(resolve, delay));
 }
 
@@ -132,23 +140,29 @@ const CLOUDFLARE_WAIT_POLL_MS = 5000;
  */
 export async function waitForCloudflareChallengeToBeSolved(
   page: Page,
-  options: { timeoutMs: number } = { timeoutMs: 90_000 }
+  options: { timeoutMs?: number; sendLog?: SendLogFn } = {},
+  sendLogLegacy?: SendLogFn
 ): Promise<boolean> {
-  const { timeoutMs } = options;
+  const timeoutMs = options.timeoutMs ?? 90_000;
+  const sendLog = options.sendLog ?? sendLogLegacy;
   const start = Date.now();
-  logger.log(
-    `[Playwright]: Cloudflare challenge detected. Waiting up to ${timeoutMs / 1000}s for it to be solved (e.g. by Browser Use)...`
-  );
+  const msg1 = `[Playwright]: Cloudflare challenge detected. Waiting up to ${timeoutMs / 1000}s for it to be solved (e.g. by Browser Use)...`;
+  logger.log(msg1);
+  sendLog?.("Playwright", msg1);
 
   while (Date.now() - start < timeoutMs) {
     try {
       if (page.isClosed()) {
-        logger.warn("[Playwright]: Page was closed during Cloudflare wait.");
+        const msg2 = "[Playwright]: Page was closed during Cloudflare wait.";
+        logger.warn(msg2);
+        sendLog?.("Playwright", msg2, "warn");
         return false;
       }
       const stillCloudflare = await isCloudflareSecurityPage(page);
       if (!stillCloudflare) {
-        logger.log("[Playwright]: Cloudflare challenge appears solved, continuing.");
+        const msg3 = "[Playwright]: Cloudflare challenge appears solved, continuing.";
+        logger.log(msg3);
+        sendLog?.("Playwright", msg3);
         return true;
       }
     } catch (e) {
@@ -158,9 +172,10 @@ export async function waitForCloudflareChallengeToBeSolved(
         msg.includes("browser has been closed") ||
         msg.includes("context or browser has been closed")
       ) {
-        logger.warn(
-          "[Playwright]: Browser or page was closed during Cloudflare wait (session may have timed out or disconnected)."
-        );
+        const msg4 =
+          "[Playwright]: Browser or page was closed during Cloudflare wait (session may have timed out or disconnected).";
+        logger.warn(msg4);
+        sendLog?.("Playwright", msg4, "warn");
         return false;
       }
       throw e;
@@ -168,6 +183,8 @@ export async function waitForCloudflareChallengeToBeSolved(
     await new Promise((r) => setTimeout(r, CLOUDFLARE_WAIT_POLL_MS));
   }
 
-  logger.warn("[Playwright]: Timeout waiting for Cloudflare challenge to be solved.");
+  const msg5 = "[Playwright]: Timeout waiting for Cloudflare challenge to be solved.";
+  logger.warn(msg5);
+  sendLog?.("Playwright", msg5, "warn");
   return false;
 }

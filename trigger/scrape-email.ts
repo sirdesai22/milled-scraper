@@ -6,6 +6,18 @@ import {
   waitForCloudflareChallengeToBeSolved,
 } from "./playwright-browser";
 import { insertEmail, incrementScrapedCount } from "../lib/supabase";
+import { sendJobLog } from "./app-logs";
+
+function log(
+  jobId: string,
+  msg: string,
+  level: "info" | "warn" | "error" = "info"
+) {
+  if (level === "error") logger.error(msg);
+  else if (level === "warn") logger.warn(msg);
+  else logger.log(msg);
+  sendJobLog(jobId, "scrape-email", msg, level).catch(() => {});
+}
 
 interface ScrapeEmailPayload {
   emailUrl: string;
@@ -22,19 +34,24 @@ export const scrapeEmailTask = task({
   },
   run: async (payload: ScrapeEmailPayload) => {
     const { emailUrl, brandName, jobId } = payload;
+    const appLog: (source: string, message: string, level?: "info" | "warn") => void = (
+      source,
+      message,
+      level = "info"
+    ) => sendJobLog(jobId, source, message, level).catch(() => {});
 
-    logger.log(`[scrape-email]: Starting scrape for URL: ${emailUrl}`);
+    log(jobId, `[scrape-email]: Starting scrape for URL: ${emailUrl}`);
 
-    const { browser, close: closeBrowser } = await getBrowserForScraping();
+    const { browser, close: closeBrowser } = await getBrowserForScraping({ sendLog: appLog });
     if (process.env.BROWSER_USE_API_KEY && !isOxylabsConfigured()) {
-      logger.log("[scrape-email]: Using Browser Use Cloud for this email page");
+      log(jobId, "[scrape-email]: Using Browser Use Cloud for this email page");
     }
 
     try {
       const page = await browser.newPage();
 
       // Navigate to email page
-      logger.log(`[scrape-email]: Navigating to ${emailUrl}`);
+      log(jobId, `[scrape-email]: Navigating to ${emailUrl}`);
 
       const gotoTimeoutMs = isOxylabsConfigured() ? 90_000 : 30_000;
       await page.goto(emailUrl, {
@@ -43,19 +60,20 @@ export const scrapeEmailTask = task({
       });
 
       // Random human-like delay before extracting
-      await randomDelay(1000, 4000);
+      await randomDelay(1000, 4000, appLog);
 
       // Check for Cloudflare "Verify you are human" security page
       const hitSecurityPage = await isCloudflareSecurityPage(page);
       const emailcellTimeoutMs = hitSecurityPage ? 90_000 : 10_000;
       if (hitSecurityPage) {
-        logger.log(
+        log(
+          jobId,
           "[scrape-email]: Cloudflare challenge detected. Waiting for Browser Use to solve it (up to 90s) before looking for #emailcell..."
         );
       }
 
       // Wait for the emailcell div to be present (longer timeout if we hit Cloudflare)
-      logger.log("[scrape-email]: Waiting for #emailcell to load");
+      log(jobId, "[scrape-email]: Waiting for #emailcell to load");
 
       try {
         await page.waitForSelector("#emailcell", { timeout: emailcellTimeoutMs });
@@ -71,11 +89,13 @@ export const scrapeEmailTask = task({
       // Check if site is still showing Cloudflare after reaching the page (e.g. challenge appeared or page is blocked)
       let stillCloudflare = await isCloudflareSecurityPage(page);
       if (stillCloudflare) {
-        logger.log(
+        log(
+          jobId,
           "[scrape-email]: Cloudflare still present after #emailcell loaded. Waiting for challenge to clear..."
         );
         const solved = await waitForCloudflareChallengeToBeSolved(page, {
           timeoutMs: 90_000,
+          sendLog: appLog,
         });
         if (!solved) {
           throw new Error(
@@ -91,7 +111,7 @@ export const scrapeEmailTask = task({
       }
 
       // Extract the email HTML
-      logger.log("[scrape-email]: Extracting email content");
+      log(jobId, "[scrape-email]: Extracting email content");
 
       const emailData = await page.evaluate(() => {
         const emailCell = document.querySelector("#emailcell");
@@ -127,14 +147,15 @@ export const scrapeEmailTask = task({
         throw new Error("Failed to extract email HTML");
       }
 
-      logger.log(
+      log(
+        jobId,
         `[scrape-email]: Extracted ${emailData.emailHtml.length} characters of HTML`
       );
 
-      // Insert into database
-      logger.log("[scrape-email]: Saving to database");
+      // Insert into database (skip if this email_url already exists)
+      log(jobId, "[scrape-email]: Saving to database");
 
-      await insertEmail({
+      const result = await insertEmail({
         job_id: jobId,
         brand_name: brandName,
         email_url: emailUrl,
@@ -142,10 +163,19 @@ export const scrapeEmailTask = task({
         email_html: emailData.emailHtml,
       });
 
-      // Increment scraped count
-      await incrementScrapedCount(jobId);
+      if ("duplicate" in result && result.duplicate) {
+        log(jobId, `[scrape-email]: Email already in database (duplicate URL), skipping`, "warn");
+        return {
+          success: true,
+          emailUrl,
+          duplicate: true,
+          emailLength: emailData.emailHtml.length,
+          subject: emailData.subject,
+        };
+      }
 
-      logger.log("[scrape-email]: Successfully saved email to database");
+      await incrementScrapedCount(jobId);
+      log(jobId, "[scrape-email]: Successfully saved email to database");
 
       return {
         success: true,
@@ -154,7 +184,11 @@ export const scrapeEmailTask = task({
         subject: emailData.subject,
       };
     } catch (error) {
-      logger.error(`[scrape-email]: Error scraping ${emailUrl}: ${error}`);
+      log(
+        jobId,
+        `[scrape-email]: Error scraping ${emailUrl}: ${error}`,
+        "error"
+      );
       throw error;
     } finally {
       await closeBrowser();

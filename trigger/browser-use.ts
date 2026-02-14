@@ -9,6 +9,12 @@ export interface ScrapingBrowser {
   close: () => Promise<void>;
 }
 
+export type SendLogFn = (
+  source: string,
+  message: string,
+  level?: "info" | "warn"
+) => void;
+
 export function isOxylabsConfigured(): boolean {
   return !!(
     process.env.OXYLABS_PROXY_USERNAME && process.env.OXYLABS_PROXY_PASSWORD
@@ -19,10 +25,16 @@ export function isOxylabsConfigured(): boolean {
  * Returns a browser for scraping. When Oxylabs credentials are set, uses local
  * browser with Oxylabs Web Unblocker only (Browser Use is ignored). Otherwise
  * when BROWSER_USE_API_KEY is set, uses Browser Use Cloud; else local browser.
+ * Optional sendLog forwards logs to the app UI.
  */
-export async function getBrowserForScraping(): Promise<ScrapingBrowser> {
+export async function getBrowserForScraping(options?: {
+  sendLog?: SendLogFn;
+}): Promise<ScrapingBrowser> {
+  const sendLog = options?.sendLog;
   if (isOxylabsConfigured()) {
-    logger.log("[Scraping]: Using Oxylabs Web Unblocker only (local browser)");
+    const msg = "[Scraping]: Using Oxylabs Web Unblocker only (local browser)";
+    logger.log(msg);
+    sendLog?.("Scraping", msg);
     return {
       browser: getBrowser(),
       close: async () => {},
@@ -31,7 +43,7 @@ export async function getBrowserForScraping(): Promise<ScrapingBrowser> {
 
   const apiKey = process.env.BROWSER_USE_API_KEY;
   if (apiKey) {
-    return getBrowserUseBrowser(apiKey);
+    return getBrowserUseBrowser(apiKey, sendLog);
   }
 
   return {
@@ -40,10 +52,15 @@ export async function getBrowserForScraping(): Promise<ScrapingBrowser> {
   };
 }
 
-async function getBrowserUseBrowser(apiKey: string): Promise<ScrapingBrowser> {
+async function getBrowserUseBrowser(
+  apiKey: string,
+  sendLog?: SendLogFn
+): Promise<ScrapingBrowser> {
   const client = new BrowserUseClient({ apiKey });
 
-  logger.log("[Browser Use]: Creating cloud browser session");
+  const msg1 = "[Browser Use]: Creating cloud browser session";
+  logger.log(msg1);
+  sendLog?.("Browser Use", msg1);
 
   const session = await client.browsers.createBrowserSession({
     timeout: 15, // minutes
@@ -56,7 +73,9 @@ async function getBrowserUseBrowser(apiKey: string): Promise<ScrapingBrowser> {
     );
   }
 
-  logger.log(`[Browser Use]: Session ${session.id} created, connecting via CDP`);
+  const msg2 = `[Browser Use]: Session ${session.id} created, connecting via CDP`;
+  logger.log(msg2);
+  sendLog?.("Browser Use", msg2);
 
   const browser = await chromium.connectOverCDP(session.cdpUrl);
 
@@ -66,16 +85,22 @@ async function getBrowserUseBrowser(apiKey: string): Promise<ScrapingBrowser> {
       try {
         await browser.close();
       } catch (e) {
-        logger.warn("[Browser Use]: Error closing browser:", e);
+        const msg = `[Browser Use]: Error closing browser: ${e}`;
+        logger.warn(msg, e);
+        sendLog?.("Browser Use", msg, "warn");
       }
       try {
         await client.browsers.updateBrowserSession({
           session_id: session.id,
           action: "stop",
         });
-        logger.log("[Browser Use]: Session stopped");
+        const msg3 = "[Browser Use]: Session stopped";
+        logger.log(msg3);
+        sendLog?.("Browser Use", msg3);
       } catch (e) {
-        logger.warn("[Browser Use]: Error stopping session:", e);
+        const msg = `[Browser Use]: Error stopping session: ${e}`;
+        logger.warn(msg, e);
+        sendLog?.("Browser Use", msg, "warn");
       }
     },
   };

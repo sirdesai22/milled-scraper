@@ -7,8 +7,20 @@ import {
 } from "./playwright-browser";
 import { updateJob } from "../lib/supabase";
 import { scrapeEmailTask } from "@/trigger/scrape-email";
+import { sendJobLog } from "./app-logs";
 
 const MAX_EMAILS_TO_SCRAPE = 3;
+
+function log(
+  jobId: string,
+  msg: string,
+  level: "info" | "warn" | "error" = "info"
+) {
+  if (level === "error") logger.error(msg);
+  else if (level === "warn") logger.warn(msg);
+  else logger.log(msg);
+  sendJobLog(jobId, "scrape-brand", msg, level).catch(() => {});
+}
 
 interface ScrapeBrandPayload {
   brandName: string;
@@ -20,10 +32,15 @@ export const scrapeBrandTask = task({
   maxDuration: 3600, // 1 hour max
   run: async (payload: ScrapeBrandPayload) => {
     const { brandName, jobId } = payload;
+    const appLog: (source: string, message: string, level?: "info" | "warn") => void = (
+      source,
+      message,
+      level = "info"
+    ) => sendJobLog(jobId, source, message, level).catch(() => {});
 
-    logger.log(`[scrape-brand]: Starting scrape for brand: ${brandName}`);
+    log(jobId, `[scrape-brand]: Starting scrape for brand: ${brandName}`);
 
-    const { browser, close: closeBrowser } = await getBrowserForScraping();
+    const { browser, close: closeBrowser } = await getBrowserForScraping({ sendLog: appLog });
 
     try {
       // Update job status to running
@@ -33,7 +50,7 @@ export const scrapeBrandTask = task({
 
       // Navigate to Milled search page
       const searchUrl = `https://milled.com/search?q=${encodeURIComponent(brandName)}`;
-      logger.log(`[scrape-brand]: Navigating to ${searchUrl}`);
+      log(jobId, `[scrape-brand]: Navigating to ${searchUrl}`);
 
       const gotoTimeoutMs = isOxylabsConfigured() ? 90_000 : 30_000;
       await page.goto(searchUrl, {
@@ -42,17 +59,20 @@ export const scrapeBrandTask = task({
       });
 
       // Random human-like delay
-      await randomDelay(2000, 5000);
+      await randomDelay(2000, 5000, appLog);
 
       // Check for Cloudflare "Verify you are human" security page
       let hitSecurityPage = await isCloudflareSecurityPage(page);
       if (hitSecurityPage) {
         const solved = await waitForCloudflareChallengeToBeSolved(page, {
           timeoutMs: 90_000,
+          sendLog: appLog,
         });
         if (!solved) {
-          logger.warn(
-            "[scrape-brand]: Cloudflare challenge was not solved in time. Cannot scrape search results."
+          log(
+            jobId,
+            "[scrape-brand]: Cloudflare challenge was not solved in time. Cannot scrape search results.",
+            "warn"
           );
           await updateJob(jobId, {
             status: "failed",
@@ -73,7 +93,7 @@ export const scrapeBrandTask = task({
 
       // Extract email campaign links from the search results
       // Structure: <ul> > <li> > ... > <a data-turbo-frame="_top" href="/brand/email-slug">
-      logger.log("[scrape-brand]: Extracting email campaign links");
+      log(jobId, "[scrape-brand]: Extracting email campaign links");
 
       const scrapeResult = await page.evaluate(() => {
         const seen = new Set<string>();
@@ -118,6 +138,10 @@ export const scrapeBrandTask = task({
         listItemsCount: scrapeResult.listItemsCount,
         emailCampaignsFound: emailLinks.length,
       });
+      log(
+        jobId,
+        `[scrape-brand]: Scraped page snapshot — ${emailLinks.length} campaigns found (listItems: ${scrapeResult.listItemsCount})`
+      );
 
       const isCloudflareBlock =
         emailLinks.length === 0 &&
@@ -125,16 +149,17 @@ export const scrapeBrandTask = task({
           scrapeResult.pageTitle.includes("Attention Required"));
 
       if (isCloudflareBlock) {
-        logger.warn(
-          "[scrape-brand]: Page is Cloudflare challenge (Attention Required). Waiting for it to be solved..."
+        log(
+          jobId,
+          "[scrape-brand]: Page is Cloudflare challenge (Attention Required). Waiting for it to be solved...",
+          "warn"
         );
         const solved = await waitForCloudflareChallengeToBeSolved(page, {
           timeoutMs: 90_000,
+          sendLog: appLog,
         });
         if (!solved) {
-          logger.warn(
-            "[scrape-brand]: Cloudflare challenge was not solved in time."
-          );
+          log(jobId, "[scrape-brand]: Cloudflare challenge was not solved in time.", "warn");
           await updateJob(jobId, {
             status: "failed",
             total_emails: 0,
@@ -187,16 +212,17 @@ export const scrapeBrandTask = task({
           };
         }
         emailLinks = retryResult.links;
-        logger.log(
+        log(
+          jobId,
           `[scrape-brand]: After Cloudflare solve, found ${emailLinks.length} email campaigns`
         );
       }
 
-      logger.log(`[scrape-brand]: Found ${emailLinks.length} email campaigns`);
-      logger.log(`[scrape-brand]: Email links: ${emailLinks.join(", ")}`);
+      log(jobId, `[scrape-brand]: Found ${emailLinks.length} email campaigns`);
+      log(jobId, `[scrape-brand]: Email links: ${emailLinks.join(", ")}`);
 
       if (emailLinks.length === 0) {
-        logger.warn("[scrape-brand]: No email campaigns found");
+        log(jobId, "[scrape-brand]: No email campaigns found", "warn");
         await updateJob(jobId, {
           status: "completed",
           total_emails: 0,
@@ -214,7 +240,8 @@ export const scrapeBrandTask = task({
       // Limit to max emails to scrape
       const linksToScrape = emailLinks.slice(0, MAX_EMAILS_TO_SCRAPE);
       if (emailLinks.length > MAX_EMAILS_TO_SCRAPE) {
-        logger.log(
+        log(
+          jobId,
           `[scrape-brand]: Limiting to ${MAX_EMAILS_TO_SCRAPE} emails (found ${emailLinks.length})`
         );
       }
@@ -226,6 +253,13 @@ export const scrapeBrandTask = task({
         willScrape: linksToScrape.length,
         emailUrls: linksToScrape,
       });
+      log(
+        jobId,
+        `[scrape-brand]: Scraped search page — totalFound=${emailLinks.length}, willScrape=${linksToScrape.length}`
+      );
+      for (const url of linksToScrape) {
+        log(jobId, `[scrape-brand]: Will scrape: ${url}`);
+      }
 
       // Update total_emails count (number we're actually scraping)
       await updateJob(jobId, { total_emails: linksToScrape.length });
@@ -233,7 +267,7 @@ export const scrapeBrandTask = task({
       await page.close();
 
       // Batch trigger child tasks for each email link
-      logger.log("[scrape-brand]: Triggering child tasks for email scraping");
+      log(jobId, "[scrape-brand]: Triggering child tasks for email scraping");
 
       const batchPayloads = linksToScrape.map((emailUrl) => ({
         payload: {
@@ -255,13 +289,16 @@ export const scrapeBrandTask = task({
           successCount++;
         } else {
           failCount++;
-          logger.error(
-            `[scrape-brand]: Failed to scrape email: ${result.error}`
+          log(
+            jobId,
+            `[scrape-brand]: Failed to scrape email: ${result.error}`,
+            "error"
           );
         }
       }
 
-      logger.log(
+      log(
+        jobId,
         `[scrape-brand]: Completed. Success: ${successCount}, Failed: ${failCount}`
       );
 
@@ -281,8 +318,10 @@ export const scrapeBrandTask = task({
         message.includes("Target closed") ||
         message.includes("browser has been closed") ||
         message.includes("context or browser has been closed");
-      logger.error(
-        `[scrape-brand]: Error: ${isClosed ? "Browser or page was closed (session may have timed out or disconnected). " + message : message}`
+      log(
+        jobId,
+        `[scrape-brand]: Error: ${isClosed ? "Browser or page was closed (session may have timed out or disconnected). " + message : message}`,
+        "error"
       );
 
       // Update job status to failed

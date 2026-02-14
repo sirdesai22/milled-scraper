@@ -1,12 +1,7 @@
-export const AUTH_KEY = "milled_auth";
+/**
+ * Client-side auth helpers. Session is enforced by middleware (cookie).
+ */
 
-export function isAuthenticated(): boolean {
-  if (typeof window === "undefined") return false;
-  return localStorage.getItem(AUTH_KEY) === "1";
-}
-
-export function logout(): void {
-  if (typeof window !== "undefined") {
-    localStorage.removeItem(AUTH_KEY);
-  }
+export async function logout(): Promise<void> {
+  await fetch("/api/auth/logout", { method: "POST" });
 }
