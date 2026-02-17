@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import type { ScrapeJob, Email } from "@/lib/types";
 import { RUNNING_STALE_AFTER_MS } from "@/lib/constants";
 import { EmailRow } from "@/components/EmailRow";
@@ -39,22 +40,46 @@ export function JobCard({ job, isExpanded, emails, onToggle }: JobCardProps) {
   const statusLabel = stale ? "Run may have stopped" : job.status;
   const statusClasses = getStatusClasses(job.status, stale);
 
+  const showReportButton = job.status === "completed" && job.scraped_emails > 0;
+
   return (
     <div className="rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900/50 overflow-hidden transition-shadow hover:shadow-md">
-      <button
-        type="button"
-        onClick={onToggle}
-        className="w-full p-4 text-left flex items-center justify-between gap-4 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors"
-      >
-        <div className="min-w-0 flex-1">
+      <div className="flex items-center gap-4 p-4">
+        <button
+          type="button"
+          onClick={onToggle}
+          className="min-w-0 flex-1 text-left hover:bg-slate-50 dark:hover:bg-slate-800/50 -m-4 p-4 rounded-lg transition-colors"
+        >
           <h3 className="text-base font-semibold text-slate-900 dark:text-white truncate">
             {job.brand_name}
           </h3>
           <p className="mt-0.5 text-sm text-slate-500 dark:text-slate-400">
             {new Date(job.created_at).toLocaleString()}
           </p>
-        </div>
+        </button>
         <div className="flex items-center gap-3 shrink-0">
+          {showReportButton && (
+            <Link
+              href={`/report/${job.id}`}
+              onClick={(e) => e.stopPropagation()}
+              className="inline-flex items-center gap-2 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition-colors"
+            >
+              <svg
+                className="w-4 h-4"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                />
+              </svg>
+              Report
+            </Link>
+          )}
           <span
             className={`inline-flex items-center px-2.5 py-1 rounded-md text-xs font-medium ${statusClasses}`}
             title={stale ? "Job has been running longer than expected; it may have crashed or timed out." : undefined}
@@ -64,16 +89,23 @@ export function JobCard({ job, isExpanded, emails, onToggle }: JobCardProps) {
           <span className="text-sm text-slate-500 dark:text-slate-400 tabular-nums">
             {job.scraped_emails}/{job.total_emails}
           </span>
-          <svg
-            className={`w-5 h-5 text-slate-400 dark:text-slate-500 transition-transform duration-200 ${isExpanded ? "rotate-180" : ""}`}
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
+          <button
+            type="button"
+            onClick={onToggle}
+            className="p-1 -m-1 rounded hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+            aria-label={isExpanded ? "Collapse" : "Expand"}
           >
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-          </svg>
+            <svg
+              className={`w-5 h-5 text-slate-400 dark:text-slate-500 transition-transform duration-200 ${isExpanded ? "rotate-180" : ""}`}
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+            </svg>
+          </button>
         </div>
-      </button>
+      </div>
 
       {isExpanded && (
         <div className="border-t border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-800/30 p-4">
