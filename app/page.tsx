@@ -14,6 +14,9 @@ export default function Home() {
   const [emailsByJob, fetchEmailsForJob] = useJobEmails();
 
   const [brandName, setBrandName] = useState("");
+  const [datePreset, setDatePreset] = useState("");
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
@@ -26,10 +29,25 @@ export default function Home() {
     if (!brandName.trim()) return;
     setLoading(true);
     try {
+      const body: {
+        brandName: string;
+        datePreset?: string;
+        dateFrom?: string;
+        dateTo?: string;
+        limit?: number;
+        maxPages?: number;
+      } = { brandName: brandName.trim() };
+      if (datePreset && datePreset !== "custom") {
+        body.datePreset = datePreset;
+      }
+      if (datePreset === "custom" && dateFrom && dateTo) {
+        body.dateFrom = new Date(dateFrom).toISOString().slice(0, 10);
+        body.dateTo = new Date(dateTo).toISOString().slice(0, 10);
+      }
       const res = await fetch("/api/scrape", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ brandName: brandName.trim() }),
+        body: JSON.stringify(body),
       });
       if (res.ok) {
         setBrandName("");
@@ -84,8 +102,14 @@ export default function Home() {
 
         <ScrapeForm
           brandName={brandName}
+          datePreset={datePreset}
+          dateFrom={dateFrom}
+          dateTo={dateTo}
           loading={loading}
           onBrandNameChange={setBrandName}
+          onDatePresetChange={setDatePreset}
+          onDateFromChange={setDateFrom}
+          onDateToChange={setDateTo}
           onStartScrape={handleStartScrape}
         />
 

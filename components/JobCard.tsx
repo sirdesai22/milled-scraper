@@ -2,7 +2,7 @@
 
 import type { ScrapeJob, Email } from "@/lib/types";
 import { RUNNING_STALE_AFTER_MS } from "@/lib/constants";
-import { EmailRow } from "./EmailRow";
+import { EmailRow } from "@/components/EmailRow";
 import { JobRunView } from "./JobRunView";
 
 function getStatusClasses(status: string, isStale?: boolean): string {

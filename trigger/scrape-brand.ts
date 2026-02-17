@@ -8,8 +8,12 @@ import {
 import { updateJob } from "../lib/supabase";
 import { scrapeEmailTask } from "@/trigger/scrape-email";
 import { sendJobLog } from "./app-logs";
+import { ensureMilledLoggedIn } from "./milled-login";
+import type { Page } from "playwright";
 
 const MAX_EMAILS_TO_SCRAPE = 3;
+const SEARCH_PAGE_LIMIT = 100;
+const DEFAULT_MAX_PAGES = 10;
 
 function log(
   jobId: string,
@@ -22,16 +26,122 @@ function log(
   sendJobLog(jobId, "scrape-brand", msg, level).catch(() => {});
 }
 
+/** Maps dashboard preset to Milled data-preset-name (Pro presets). */
+export const DATE_PRESET_MAP: Record<string, string> = {
+  default: "",
+  last7Days: "last7Days",
+  last12Months: "last12Months",
+  last24Months: "last24Months",
+  allTime: "allTime",
+};
+
 interface ScrapeBrandPayload {
   brandName: string;
   jobId: string;
+  datePreset?: string;
+  dateFrom?: string;
+  dateTo?: string;
+  limit?: number;
+  maxPages?: number;
+}
+
+type SendLogFn = (source: string, message: string, level?: "info" | "warn") => void;
+
+async function applyDatePreset(
+  page: Page,
+  presetName: string,
+  sendLog: SendLogFn
+): Promise<boolean> {
+  if (!presetName) return false;
+  try {
+    const btn = await page.$(`button[data-preset-name="${presetName}"]`);
+    if (!btn) {
+      sendLog("scrape-brand", `[scrape-brand]: Date preset button not found: ${presetName}`, "warn");
+      return false;
+    }
+    await btn.click();
+    await page.waitForLoadState("networkidle", { timeout: 8_000 }).catch(() => {});
+    return true;
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e);
+    sendLog("scrape-brand", `[scrape-brand]: Date preset click failed: ${msg}`, "warn");
+    return false;
+  }
+}
+
+async function applyCustomDateRange(
+  page: Page,
+  dateFrom: string,
+  dateTo: string,
+  sendLog: SendLogFn
+): Promise<boolean> {
+  try {
+    const fromInput = await page.$('input[name="from"], input[data-date-from], #dateFrom');
+    const toInput = await page.$('input[name="to"], input[data-date-to], #dateTo');
+    if (fromInput && toInput) {
+      await fromInput.fill(dateFrom.slice(0, 10));
+      await toInput.fill(dateTo.slice(0, 10));
+      const applyBtn = await page.$('button:has-text("Apply"), [data-action="apply-dates"]');
+      if (applyBtn) await applyBtn.click();
+      await page.waitForLoadState("networkidle", { timeout: 8_000 }).catch(() => {});
+      return true;
+    }
+    sendLog("scrape-brand", "[scrape-brand]: Custom date inputs not found; skipping.", "warn");
+    return false;
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e);
+    sendLog("scrape-brand", `[scrape-brand]: Custom date range failed: ${msg}`, "warn");
+    return false;
+  }
+}
+
+/** Parse total result count from text like "Emails (993 results)". */
+async function parseTotalResults(page: Page): Promise<number | null> {
+  return page.evaluate(() => {
+    const text = document.body.innerText;
+    const match = text.match(/Emails\s*\((\d+)\s*results?\)/i) ?? text.match(/(\d+)\s*results?/i);
+    if (match) return parseInt(match[1], 10);
+    return null;
+  });
+}
+
+/** Extract campaign links from current search results page. */
+async function extractLinksFromPage(page: Page): Promise<string[]> {
+  return page.evaluate(() => {
+    const seen = new Set<string>();
+    const links: string[] = [];
+    const anchors = document.querySelectorAll('li a[data-turbo-frame="_top"]');
+    anchors.forEach((a) => {
+      const anchor = a as HTMLAnchorElement;
+      if (!anchor.href) return;
+      const url = new URL(anchor.href, window.location.origin);
+      const segments = url.pathname.split("/").filter(Boolean);
+      if (segments.length !== 2) return;
+      const fullUrl = url.origin + url.pathname;
+      if (seen.has(fullUrl)) return;
+      seen.add(fullUrl);
+      links.push(fullUrl);
+    });
+    return links;
+  });
 }
 
 export const scrapeBrandTask = task({
   id: "scrape-brand",
   maxDuration: 3600, // 1 hour max
   run: async (payload: ScrapeBrandPayload) => {
-    const { brandName, jobId } = payload;
+    const {
+      brandName,
+      jobId,
+      datePreset,
+      dateFrom,
+      dateTo,
+      limit = SEARCH_PAGE_LIMIT,
+      maxPages = DEFAULT_MAX_PAGES,
+    } = payload;
+    const effectiveLimit = Math.min(Math.max(1, limit), 100);
+    const effectiveMaxPages = Math.max(1, Math.min(maxPages, 100));
+
     const appLog: (source: string, message: string, level?: "info" | "warn") => void = (
       source,
       message,
@@ -43,13 +153,29 @@ export const scrapeBrandTask = task({
     const { browser, close: closeBrowser } = await getBrowserForScraping({ sendLog: appLog });
 
     try {
-      // Update job status to running
       await updateJob(jobId, { status: "running" });
 
       const page = await browser.newPage();
 
-      // Navigate to Milled search page
-      const searchUrl = `https://milled.com/search?q=${encodeURIComponent(brandName)}`;
+      const loggedIn = await ensureMilledLoggedIn(page, { sendLog: appLog });
+      if (!loggedIn) {
+        log(jobId, "[scrape-brand]: Milled Pro login failed; aborting.", "warn");
+        await updateJob(jobId, { status: "failed", total_emails: 0, scraped_emails: 0 });
+        await page.close();
+        return {
+          success: false,
+          brandName,
+          reason: "Milled Pro login failed (invalid credentials or login error).",
+          totalEmails: 0,
+          scrapedEmails: 0,
+        };
+      }
+
+      const q = encodeURIComponent(brandName).replace(/%20/g, "+");
+      const buildSearchUrl = (pageNum: number) =>
+        `https://milled.com/search?q=${q}&limit=${effectiveLimit}&page=${pageNum}`;
+
+      const searchUrl = buildSearchUrl(1);
       log(jobId, `[scrape-brand]: Navigating to ${searchUrl}`);
 
       const gotoTimeoutMs = isOxylabsConfigured() ? 90_000 : 30_000;
@@ -58,8 +184,22 @@ export const scrapeBrandTask = task({
         timeout: gotoTimeoutMs,
       });
 
-      // Random human-like delay
       await randomDelay(2000, 5000, appLog);
+
+      if (datePreset && DATE_PRESET_MAP[datePreset]) {
+        const presetName = DATE_PRESET_MAP[datePreset];
+        log(jobId, `[scrape-brand]: Applying date preset: ${presetName || "default"}`);
+        const applied = await applyDatePreset(page, presetName, appLog);
+        if (applied) {
+          await randomDelay(1000, 3000, appLog);
+        }
+      } else if (dateFrom && dateTo) {
+        log(jobId, `[scrape-brand]: Applying custom date range: ${dateFrom} to ${dateTo}`);
+        const applied = await applyCustomDateRange(page, dateFrom, dateTo, appLog);
+        if (applied) {
+          await randomDelay(1000, 3000, appLog);
+        }
+      }
 
       // Check for Cloudflare "Verify you are human" security page
       let hitSecurityPage = await isCloudflareSecurityPage(page);
@@ -91,62 +231,60 @@ export const scrapeBrandTask = task({
         hitSecurityPage = false;
       }
 
-      // Extract email campaign links from the search results
-      // Structure: <ul> > <li> > ... > <a data-turbo-frame="_top" href="/brand/email-slug">
-      log(jobId, "[scrape-brand]: Extracting email campaign links");
+      const totalResults = await parseTotalResults(page);
+      const totalPages =
+        totalResults != null
+          ? Math.ceil(totalResults / effectiveLimit)
+          : 1;
+      const pagesToFetch = Math.min(effectiveMaxPages, totalPages);
 
-      const scrapeResult = await page.evaluate(() => {
-        const seen = new Set<string>();
-        const links: string[] = [];
+      if (totalResults != null) {
+        log(jobId, `[scrape-brand]: Emails (${totalResults} results), fetching up to ${pagesToFetch} page(s)`);
+      }
 
-        // Campaign links have data-turbo-frame="_top" and a two-segment path (/brand/slug)
-        const anchors = document.querySelectorAll(
-          'li a[data-turbo-frame="_top"]'
-        );
+      const allLinks: string[] = [];
+      const seenUrls = new Set<string>();
 
-        anchors.forEach((a) => {
-          const anchor = a as HTMLAnchorElement;
-          const href = anchor.href;
-          if (!href) return;
+      function addLinks(links: string[]) {
+        for (const u of links) {
+          if (!seenUrls.has(u)) {
+            seenUrls.add(u);
+            allLinks.push(u);
+          }
+        }
+      }
 
-          // Build absolute URL from relative href
-          const url = new URL(href, window.location.origin);
-          const segments = url.pathname.split("/").filter(Boolean);
+      log(jobId, "[scrape-brand]: Extracting email campaign links (page 1)");
+      addLinks(await extractLinksFromPage(page));
 
-          // Campaign URLs have exactly 2 segments: /brand-slug/email-slug
-          if (segments.length !== 2) return;
-
-          const fullUrl = url.origin + url.pathname;
-          if (seen.has(fullUrl)) return; // each li has 2 identical <a> tags
-          seen.add(fullUrl);
-          links.push(fullUrl);
+      for (let p = 2; p <= pagesToFetch; p++) {
+        await randomDelay(500, 1500, appLog);
+        const pageUrl = buildSearchUrl(p);
+        log(jobId, `[scrape-brand]: Fetching page ${p}/${pagesToFetch}: ${pageUrl}`);
+        await page.goto(pageUrl, {
+          waitUntil: "domcontentloaded",
+          timeout: gotoTimeoutMs,
         });
+        await randomDelay(1000, 2500, appLog);
+        addLinks(await extractLinksFromPage(page));
+      }
 
-        return {
-          links,
-          listItemsCount: document.querySelectorAll("li").length,
-          pageTitle: document.title,
-          pageUrl: window.location.href,
-        };
-      });
+      let emailLinks = allLinks;
 
-      let emailLinks = scrapeResult.links;
-
-      logger.log("[scrape-brand]: Scraped page snapshot", {
-        pageUrl: scrapeResult.pageUrl,
-        pageTitle: scrapeResult.pageTitle,
-        listItemsCount: scrapeResult.listItemsCount,
+      logger.log("[scrape-brand]: Aggregated pages", {
+        totalResults: totalResults ?? "unknown",
+        pagesFetched: pagesToFetch,
         emailCampaignsFound: emailLinks.length,
       });
       log(
         jobId,
-        `[scrape-brand]: Scraped page snapshot — ${emailLinks.length} campaigns found (listItems: ${scrapeResult.listItemsCount})`
+        `[scrape-brand]: Aggregated ${emailLinks.length} campaigns from ${pagesToFetch} page(s)`
       );
 
+      const pageTitle = await page.title();
       const isCloudflareBlock =
         emailLinks.length === 0 &&
-        (scrapeResult.pageTitle.includes("Cloudflare") ||
-          scrapeResult.pageTitle.includes("Attention Required"));
+        (pageTitle.includes("Cloudflare") || pageTitle.includes("Attention Required"));
 
       if (isCloudflareBlock) {
         log(
@@ -175,26 +313,34 @@ export const scrapeBrandTask = task({
             scrapedEmails: 0,
           };
         }
-        // Re-extract after challenge solved
-        const retryResult = await page.evaluate(() => {
-          const seen = new Set<string>();
-          const links: string[] = [];
-          document
-            .querySelectorAll('li a[data-turbo-frame="_top"]')
-            .forEach((a) => {
-              const anchor = a as HTMLAnchorElement;
-              if (!anchor.href) return;
-              const url = new URL(anchor.href, window.location.origin);
-              const segments = url.pathname.split("/").filter(Boolean);
-              if (segments.length !== 2) return;
-              const fullUrl = url.origin + url.pathname;
-              if (seen.has(fullUrl)) return;
-              seen.add(fullUrl);
-              links.push(fullUrl);
-            });
-          return { links, pageTitle: document.title };
-        });
-        if (retryResult.links.length === 0) {
+        // Re-run aggregation after challenge solved (we're still on page 1)
+        const retryTotal = await parseTotalResults(page);
+        const retryTotalPages =
+          retryTotal != null ? Math.ceil(retryTotal / effectiveLimit) : 1;
+        const retryPagesToFetch = Math.min(effectiveMaxPages, retryTotalPages);
+        const retryLinks: string[] = [];
+        const retrySeen = new Set<string>();
+        for (const u of await extractLinksFromPage(page)) {
+          if (!retrySeen.has(u)) {
+            retrySeen.add(u);
+            retryLinks.push(u);
+          }
+        }
+        for (let p = 2; p <= retryPagesToFetch; p++) {
+          await randomDelay(500, 1500, appLog);
+          await page.goto(buildSearchUrl(p), {
+            waitUntil: "domcontentloaded",
+            timeout: gotoTimeoutMs,
+          });
+          await randomDelay(1000, 2500, appLog);
+          for (const u of await extractLinksFromPage(page)) {
+            if (!retrySeen.has(u)) {
+              retrySeen.add(u);
+              retryLinks.push(u);
+            }
+          }
+        }
+        if (retryLinks.length === 0) {
           await updateJob(jobId, {
             status: "failed",
             total_emails: 0,
@@ -205,13 +351,12 @@ export const scrapeBrandTask = task({
             success: false,
             brandName,
             reason:
-              "Still on Cloudflare or no email campaigns after challenge. Page title: " +
-              retryResult.pageTitle,
+              "Still on Cloudflare or no email campaigns after challenge.",
             totalEmails: 0,
             scrapedEmails: 0,
           };
         }
-        emailLinks = retryResult.links;
+        emailLinks = retryLinks;
         log(
           jobId,
           `[scrape-brand]: After Cloudflare solve, found ${emailLinks.length} email campaigns`

@@ -6,7 +6,21 @@ import type { scrapeBrandTask } from "@/trigger/scrape-brand";
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { brandName } = body;
+    const {
+      brandName,
+      datePreset,
+      dateFrom,
+      dateTo,
+      limit,
+      maxPages,
+    } = body as {
+      brandName?: string;
+      datePreset?: string;
+      dateFrom?: string;
+      dateTo?: string;
+      limit?: number;
+      maxPages?: number;
+    };
 
     if (!brandName || typeof brandName !== "string") {
       return NextResponse.json(
@@ -25,12 +39,19 @@ export async function POST(request: NextRequest) {
       // job_logs table may not exist yet
     }
 
+    const triggerPayload = {
+      brandName: brandName.trim(),
+      jobId: job.id,
+      ...(datePreset != null && { datePreset: String(datePreset) }),
+      ...(dateFrom != null && { dateFrom: String(dateFrom) }),
+      ...(dateTo != null && { dateTo: String(dateTo) }),
+      ...(typeof limit === "number" && limit > 0 && { limit: Math.min(limit, 100) }),
+      ...(typeof maxPages === "number" && maxPages > 0 && { maxPages }),
+    };
+
     const handle = await tasks.trigger<typeof scrapeBrandTask>(
       "scrape-brand",
-      {
-        brandName,
-        jobId: job.id,
-      }
+      triggerPayload
     );
 
     await updateJob(job.id, { trigger_run_id: handle.id });
