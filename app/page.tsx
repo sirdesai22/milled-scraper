@@ -17,6 +17,8 @@ export default function Home() {
   const [datePreset, setDatePreset] = useState("");
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
+  const [maxPages, setMaxPages] = useState(10);
+  const [searchPageLimit, setSearchPageLimit] = useState(100);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
@@ -44,6 +46,8 @@ export default function Home() {
         body.dateFrom = new Date(dateFrom).toISOString().slice(0, 10);
         body.dateTo = new Date(dateTo).toISOString().slice(0, 10);
       }
+      body.maxPages = maxPages;
+      body.limit = searchPageLimit;
       const res = await fetch("/api/scrape", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -105,11 +109,15 @@ export default function Home() {
           datePreset={datePreset}
           dateFrom={dateFrom}
           dateTo={dateTo}
+          maxPages={maxPages}
+          searchPageLimit={searchPageLimit}
           loading={loading}
           onBrandNameChange={setBrandName}
           onDatePresetChange={setDatePreset}
           onDateFromChange={setDateFrom}
           onDateToChange={setDateTo}
+          onMaxPagesChange={setMaxPages}
+          onSearchPageLimitChange={setSearchPageLimit}
           onStartScrape={handleStartScrape}
         />
 
