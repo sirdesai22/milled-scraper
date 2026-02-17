@@ -87,21 +87,21 @@ export default function Home() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-950">
+    <div className="min-h-screen bg-slate-50">
       <div className="max-w-4xl mx-auto px-4 sm:px-6 py-8 sm:py-10">
         <header className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-6 mb-8">
           <div>
-            <h1 className="text-2xl sm:text-3xl font-semibold tracking-tight text-slate-900 dark:text-white">
+            <h1 className="text-2xl sm:text-3xl font-semibold tracking-tight text-slate-900">
               Milled Scraper
             </h1>
-            <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+            <p className="mt-1 text-sm text-slate-500">
               Scrape email campaigns from milled.com by brand name
             </p>
           </div>
           <button
             type="button"
             onClick={handleLogout}
-            className="self-start sm:self-center px-4 py-2 text-sm font-medium text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white hover:bg-slate-200 dark:hover:bg-slate-800 rounded-lg transition-colors"
+            className="self-start sm:self-center px-4 py-2 text-sm font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-200 rounded-lg transition-colors"
           >
             Log out
           </button>
@@ -126,12 +126,12 @@ export default function Home() {
           onStartScrape={handleStartScrape}
         />
 
-        <section className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/50 shadow-sm overflow-hidden">
-          <div className="px-5 py-4 border-b border-slate-200 dark:border-slate-800">
-            <h2 className="text-base font-semibold text-slate-900 dark:text-white">
+        <section className="rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden">
+          <div className="px-5 py-4 border-b border-slate-200">
+            <h2 className="text-base font-semibold text-slate-900">
               Scrape jobs
             </h2>
-            <p className="mt-0.5 text-sm text-slate-500 dark:text-slate-400">
+            <p className="mt-0.5 text-sm text-slate-500">
               Expand a job to view scraped emails
             </p>
           </div>

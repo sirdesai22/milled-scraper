@@ -12,7 +12,7 @@ export function EmailExampleThumbnail({ email, onClick }: EmailExampleThumbnailP
   return (
     <div
       onClick={onClick}
-      className="group relative rounded-lg border border-slate-200 dark:border-slate-700 overflow-hidden cursor-pointer hover:border-blue-500 dark:hover:border-blue-400 transition-all hover:shadow-md bg-white dark:bg-slate-800"
+      className="group relative rounded-lg border border-slate-200 overflow-hidden cursor-pointer hover:border-blue-500 transition-all hover:shadow-md bg-white"
     >
       <div className="relative w-full aspect-[3/4] overflow-hidden bg-white min-h-[160px]">
         <div className="absolute inset-0 scale-[0.25] origin-top-left w-[400%] h-[400%] pointer-events-none">
@@ -25,8 +25,8 @@ export function EmailExampleThumbnail({ email, onClick }: EmailExampleThumbnailP
         </div>
         <div className="absolute inset-0 bg-black/0 group-hover:bg-black/5 transition-colors" />
       </div>
-      <div className="p-2 border-t border-slate-200 dark:border-slate-700">
-        <p className="text-xs font-medium text-slate-900 dark:text-white line-clamp-2">
+      <div className="p-2 border-t border-slate-200">
+        <p className="text-xs font-medium text-slate-900 line-clamp-2">
           {email.email_subject || "No subject"}
         </p>
       </div>

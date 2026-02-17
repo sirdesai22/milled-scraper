@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { EmailCapture } from "@/components/EmailCapture";
-import { ScrapeJob, Email } from "@/lib/types";
+import { ScrapeJob } from "@/lib/types";
 
 export default function ReportLandingPage() {
   const router = useRouter();
@@ -59,25 +59,25 @@ export default function ReportLandingPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex items-center justify-center">
-        <div className="text-slate-600 dark:text-slate-400">Loading...</div>
+      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
+        <div className="text-slate-600">Loading...</div>
       </div>
     );
   }
 
   if (!job) {
     return (
-      <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex items-center justify-center">
+      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
         <div className="text-center">
-          <h1 className="text-2xl font-bold text-slate-900 dark:text-white mb-2">
+          <h1 className="text-2xl font-bold text-slate-900 mb-2">
             Report Not Found
           </h1>
-          <p className="text-slate-600 dark:text-slate-400 mb-4">
+          <p className="text-slate-600 mb-4">
             This report does not exist or has been removed.
           </p>
           <button
             onClick={() => router.push("/")}
-            className="text-blue-600 hover:text-blue-700 dark:text-blue-400"
+            className="text-blue-600 hover:text-blue-700"
           >
             Go to Home
           </button>
@@ -87,7 +87,7 @@ export default function ReportLandingPage() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 py-12 px-4">
+    <div className="min-h-screen bg-slate-50 py-12 px-4">
       <EmailCapture
         jobId={jobId}
         brandName={job.brand_name}

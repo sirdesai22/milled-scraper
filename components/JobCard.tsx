@@ -8,19 +8,19 @@ import { JobRunView } from "./JobRunView";
 
 function getStatusClasses(status: string, isStale?: boolean): string {
   if (isStale) {
-    return "bg-amber-100 text-amber-800 dark:bg-amber-900/50 dark:text-amber-300";
+    return "bg-amber-100 text-amber-800";
   }
   switch (status) {
     case "pending":
-      return "bg-slate-100 text-slate-700 dark:bg-slate-700 dark:text-slate-300";
+      return "bg-slate-100 text-slate-700";
     case "running":
-      return "bg-indigo-100 text-indigo-800 dark:bg-indigo-900/50 dark:text-indigo-300";
+      return "bg-indigo-100 text-indigo-800";
     case "completed":
-      return "bg-emerald-100 text-emerald-800 dark:bg-emerald-900/50 dark:text-emerald-300";
+      return "bg-emerald-100 text-emerald-800";
     case "failed":
-      return "bg-red-100 text-red-800 dark:bg-red-900/50 dark:text-red-300";
+      return "bg-red-100 text-red-800";
     default:
-      return "bg-slate-100 text-slate-700 dark:bg-slate-700 dark:text-slate-300";
+      return "bg-slate-100 text-slate-700";
   }
 }
 
@@ -43,17 +43,17 @@ export function JobCard({ job, isExpanded, emails, onToggle }: JobCardProps) {
   const showReportButton = job.status === "completed" && job.scraped_emails > 0;
 
   return (
-    <div className="rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900/50 overflow-hidden transition-shadow hover:shadow-md">
+    <div className="rounded-xl border border-slate-200 bg-white overflow-hidden transition-shadow hover:shadow-md">
       <div className="flex items-center gap-4 p-4">
         <button
           type="button"
           onClick={onToggle}
-          className="min-w-0 flex-1 text-left hover:bg-slate-50 dark:hover:bg-slate-800/50 -m-4 p-4 rounded-lg transition-colors"
+          className="min-w-0 flex-1 text-left hover:bg-slate-50 -m-4 p-4 rounded-lg transition-colors"
         >
-          <h3 className="text-base font-semibold text-slate-900 dark:text-white truncate">
+          <h3 className="text-base font-semibold text-slate-900 truncate">
             {job.brand_name}
           </h3>
-          <p className="mt-0.5 text-sm text-slate-500 dark:text-slate-400">
+          <p className="mt-0.5 text-sm text-slate-500">
             {new Date(job.created_at).toLocaleString()}
           </p>
         </button>
@@ -86,17 +86,17 @@ export function JobCard({ job, isExpanded, emails, onToggle }: JobCardProps) {
           >
             {statusLabel}
           </span>
-          <span className="text-sm text-slate-500 dark:text-slate-400 tabular-nums">
+          <span className="text-sm text-slate-500 tabular-nums">
             {job.scraped_emails}/{job.total_emails}
           </span>
           <button
             type="button"
             onClick={onToggle}
-            className="p-1 -m-1 rounded hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+            className="p-1 -m-1 rounded hover:bg-slate-100 transition-colors"
             aria-label={isExpanded ? "Collapse" : "Expand"}
           >
             <svg
-              className={`w-5 h-5 text-slate-400 dark:text-slate-500 transition-transform duration-200 ${isExpanded ? "rotate-180" : ""}`}
+              className={`w-5 h-5 text-slate-400 transition-transform duration-200 ${isExpanded ? "rotate-180" : ""}`}
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
@@ -108,9 +108,9 @@ export function JobCard({ job, isExpanded, emails, onToggle }: JobCardProps) {
       </div>
 
       {isExpanded && (
-        <div className="border-t border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-800/30 p-4">
+        <div className="border-t border-slate-200 bg-slate-50/50 p-4">
           {stale && (
-            <p className="mb-3 text-sm text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg px-3 py-2">
+            <p className="mb-3 text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
               This run has had no update for a long time and may have stopped (crashed or timed out).
             </p>
           )}
@@ -121,15 +121,15 @@ export function JobCard({ job, isExpanded, emails, onToggle }: JobCardProps) {
             displayStale={stale}
           />
 
-          <h4 className="text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2 mt-2">
+          <h4 className="text-sm font-semibold text-slate-700 mb-2 mt-2">
             Current state
           </h4>
           {emails === undefined ? (
-            <div className="flex items-center justify-center py-8 text-sm text-slate-500 dark:text-slate-400">
+            <div className="flex items-center justify-center py-8 text-sm text-slate-500">
               <span className="animate-pulse">Loading emails…</span>
             </div>
           ) : emails.length === 0 ? (
-            <p className="py-6 text-center text-sm text-slate-500 dark:text-slate-400">
+            <p className="py-6 text-center text-sm text-slate-500">
               No emails scraped yet
             </p>
           ) : (

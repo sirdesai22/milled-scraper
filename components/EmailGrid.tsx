@@ -12,7 +12,7 @@ export function EmailGrid({ emails, onEmailClick }: EmailGridProps) {
   if (emails.length === 0) {
     return (
       <div className="text-center py-12">
-        <p className="text-slate-500 dark:text-slate-400">
+        <p className="text-slate-500">
           No emails found for this campaign.
         </p>
       </div>

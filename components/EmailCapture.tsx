@@ -51,22 +51,22 @@ export function EmailCapture({
 
   return (
     <div className="max-w-2xl mx-auto">
-      <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xl p-8 md:p-12">
+      <div className="bg-white rounded-2xl border border-slate-200 shadow-xl p-8 md:p-12">
         <div className="text-center mb-8">
-          <h1 className="text-3xl md:text-4xl font-bold text-slate-900 dark:text-white mb-4">
+          <h1 className="text-3xl md:text-4xl font-bold text-slate-900 mb-4">
             {brandName} Email Campaign Analysis
           </h1>
-          <p className="text-lg text-slate-600 dark:text-slate-400">
+          <p className="text-lg text-slate-600">
             Get instant access to {emailCount} email campaigns and comprehensive
             strategy analysis
           </p>
         </div>
 
-        <div className="bg-slate-50 dark:bg-slate-800/50 rounded-xl p-6 mb-8">
-          <h2 className="text-lg font-semibold text-slate-900 dark:text-white mb-3">
-            What you'll get:
+        <div className="bg-slate-50 rounded-xl p-6 mb-8">
+          <h2 className="text-lg font-semibold text-slate-900 mb-3">
+            What you&apos;ll get:
           </h2>
-          <ul className="space-y-2 text-slate-600 dark:text-slate-400">
+          <ul className="space-y-2 text-slate-600">
             <li className="flex items-start">
               <svg
                 className="w-5 h-5 text-green-500 mr-2 mt-0.5 flex-shrink-0"
@@ -130,7 +130,7 @@ export function EmailCapture({
           <div>
             <label
               htmlFor="email"
-              className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2"
+              className="block text-sm font-medium text-slate-700 mb-2"
             >
               Enter your email to access the full report
             </label>
@@ -141,12 +141,12 @@ export function EmailCapture({
               onChange={(e) => setEmail(e.target.value)}
               placeholder="your@email.com"
               required
-              className="w-full px-4 py-3 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="w-full px-4 py-3 rounded-lg border border-slate-300 bg-white text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             />
           </div>
 
           {error && (
-            <div className="text-sm text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20 rounded-lg p-3">
+            <div className="text-sm text-red-600 bg-red-50 rounded-lg p-3">
               {error}
             </div>
           )}
@@ -159,7 +159,7 @@ export function EmailCapture({
             {loading ? "Submitting..." : "Get Free Access"}
           </button>
 
-          <p className="text-xs text-slate-500 dark:text-slate-400 text-center">
+          <p className="text-xs text-slate-500 text-center">
             No spam, ever. We respect your privacy.
           </p>
         </form>

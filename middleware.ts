@@ -2,7 +2,6 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { AUTH_COOKIE_NAME } from "@/lib/constants";
 
-const PROTECTED_PREFIXES = ["/", "/email"];
 const LOGIN_PATH = "/login";
 
 function isProtectedPath(pathname: string): boolean {

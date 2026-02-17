@@ -52,8 +52,8 @@ export function ScrapeForm({
   const [devPanelOpen, setDevPanelOpen] = useState(false);
 
   return (
-    <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/50 shadow-sm p-5 sm:p-6 mb-6">
-      <label htmlFor="brand-input" className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-3">
+    <div className="rounded-2xl border border-slate-200 bg-white shadow-sm p-5 sm:p-6 mb-6">
+      <label htmlFor="brand-input" className="block text-sm font-medium text-slate-700 mb-3">
         Brand name
       </label>
       <div className="flex flex-col sm:flex-row gap-3 mb-5">
@@ -64,7 +64,7 @@ export function ScrapeForm({
           onChange={(e) => onBrandNameChange(e.target.value)}
           onKeyDown={(e) => e.key === "Enter" && onStartScrape()}
           placeholder="e.g. adidas, louis vuitton"
-          className="flex-1 min-w-0 px-4 py-3 rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 dark:focus:ring-indigo-400 dark:focus:border-indigo-400 transition-shadow"
+          className="flex-1 min-w-0 px-4 py-3 rounded-xl border border-slate-300 bg-white text-slate-900 placeholder:text-slate-400 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-shadow"
           disabled={loading}
           autoComplete="off"
         />
@@ -73,7 +73,7 @@ export function ScrapeForm({
             type="button"
             onClick={onStartScrape}
             disabled={loading || !brandName.trim()}
-            className="px-5 py-3 rounded-xl bg-indigo-600 hover:bg-indigo-700 disabled:bg-slate-300 dark:disabled:bg-slate-600 disabled:text-slate-500 dark:disabled:text-slate-400 text-white font-medium text-sm transition-colors disabled:cursor-not-allowed"
+            className="px-5 py-3 rounded-xl bg-indigo-600 hover:bg-indigo-700 disabled:bg-slate-300 disabled:text-slate-500 text-white font-medium text-sm transition-colors disabled:cursor-not-allowed"
           >
             {loading ? "Starting…" : "Start scraping"}
           </button>
@@ -81,7 +81,7 @@ export function ScrapeForm({
             type="button"
             onClick={() => setDevPanelOpen((o) => !o)}
             disabled={loading}
-            className="p-3 rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors disabled:opacity-60"
+            className="p-3 rounded-xl border border-slate-300 bg-white text-slate-500 hover:text-slate-700 hover:bg-slate-50 transition-colors disabled:opacity-60"
             title="Dev options"
             aria-label="Dev options"
           >
@@ -94,11 +94,11 @@ export function ScrapeForm({
       </div>
 
       {devPanelOpen && (
-        <div className="mb-5 p-4 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700">
-          <p className="text-xs font-medium text-slate-500 dark:text-slate-400 mb-3">Dev options</p>
+        <div className="mb-5 p-4 rounded-xl bg-slate-50 border border-slate-200">
+          <p className="text-xs font-medium text-slate-500 mb-3">Dev options</p>
           <div className="flex flex-wrap gap-4">
             <div>
-              <label htmlFor="dev-max-pages" className="block text-xs text-slate-600 dark:text-slate-300 mb-1">
+              <label htmlFor="dev-max-pages" className="block text-xs text-slate-600 mb-1">
                 Max pages to scrape
               </label>
               <input
@@ -109,11 +109,11 @@ export function ScrapeForm({
                 value={maxPages}
                 onChange={(e) => onMaxPagesChange(Math.min(100, Math.max(1, parseInt(e.target.value, 10) || 1)))}
                 disabled={loading}
-                className="w-24 px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-900 dark:text-white text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 dark:focus:ring-indigo-400 dark:focus:border-indigo-400 disabled:opacity-60"
+                className="w-24 px-3 py-2 rounded-lg border border-slate-300 bg-white text-slate-900 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 disabled:opacity-60"
               />
             </div>
             <div>
-              <label htmlFor="dev-search-limit" className="block text-xs text-slate-600 dark:text-slate-300 mb-1">
+              <label htmlFor="dev-search-limit" className="block text-xs text-slate-600 mb-1">
                 Search page limit
               </label>
               <input
@@ -124,11 +124,11 @@ export function ScrapeForm({
                 value={searchPageLimit}
                 onChange={(e) => onSearchPageLimitChange(Math.min(100, Math.max(1, parseInt(e.target.value, 10) || 1)))}
                 disabled={loading}
-                className="w-24 px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-900 dark:text-white text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 dark:focus:ring-indigo-400 dark:focus:border-indigo-400 disabled:opacity-60"
+                className="w-24 px-3 py-2 rounded-lg border border-slate-300 bg-white text-slate-900 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 disabled:opacity-60"
               />
             </div>
             <div>
-              <label htmlFor="dev-max-emails" className="block text-xs text-slate-600 dark:text-slate-300 mb-1">
+              <label htmlFor="dev-max-emails" className="block text-xs text-slate-600 mb-1">
                 Max emails to scrape
               </label>
               <input
@@ -139,7 +139,7 @@ export function ScrapeForm({
                 value={maxEmailsToScrape}
                 onChange={(e) => onMaxEmailsToScrapeChange(Math.min(500, Math.max(1, parseInt(e.target.value, 10) || 1)))}
                 disabled={loading}
-                className="w-24 px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-900 dark:text-white text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 dark:focus:ring-indigo-400 dark:focus:border-indigo-400 disabled:opacity-60"
+                className="w-24 px-3 py-2 rounded-lg border border-slate-300 bg-white text-slate-900 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 disabled:opacity-60"
               />
             </div>
           </div>
@@ -148,7 +148,7 @@ export function ScrapeForm({
 
       <div className="space-y-4">
         <div>
-          <label htmlFor="date-preset" className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+          <label htmlFor="date-preset" className="block text-sm font-medium text-slate-700 mb-2">
             Date range (Pro)
           </label>
           <select
@@ -156,7 +156,7 @@ export function ScrapeForm({
             value={datePreset}
             onChange={(e) => onDatePresetChange(e.target.value)}
             disabled={loading}
-            className="w-full sm:max-w-xs px-4 py-2.5 rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 dark:focus:ring-indigo-400 dark:focus:border-indigo-400 transition-shadow disabled:opacity-60"
+            className="w-full sm:max-w-xs px-4 py-2.5 rounded-xl border border-slate-300 bg-white text-slate-900 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-shadow disabled:opacity-60"
           >
             {DATE_PRESET_OPTIONS.map((opt) => (
               <option key={opt.value || "default"} value={opt.value}>
@@ -169,7 +169,7 @@ export function ScrapeForm({
         {showCustomRange && (
           <div className="flex flex-wrap gap-4 items-end">
             <div>
-              <label htmlFor="date-from" className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+              <label htmlFor="date-from" className="block text-sm font-medium text-slate-700 mb-1">
                 From
               </label>
               <input
@@ -178,11 +178,11 @@ export function ScrapeForm({
                 value={dateFrom}
                 onChange={(e) => onDateFromChange(e.target.value)}
                 disabled={loading}
-                className="px-4 py-2.5 rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 dark:focus:ring-indigo-400 dark:focus:border-indigo-400 transition-shadow disabled:opacity-60"
+                className="px-4 py-2.5 rounded-xl border border-slate-300 bg-white text-slate-900 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-shadow disabled:opacity-60"
               />
             </div>
             <div>
-              <label htmlFor="date-to" className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+              <label htmlFor="date-to" className="block text-sm font-medium text-slate-700 mb-1">
                 To
               </label>
               <input
@@ -191,7 +191,7 @@ export function ScrapeForm({
                 value={dateTo}
                 onChange={(e) => onDateToChange(e.target.value)}
                 disabled={loading}
-                className="px-4 py-2.5 rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 dark:focus:ring-indigo-400 dark:focus:border-indigo-400 transition-shadow disabled:opacity-60"
+                className="px-4 py-2.5 rounded-xl border border-slate-300 bg-white text-slate-900 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-shadow disabled:opacity-60"
               />
             </div>
           </div>

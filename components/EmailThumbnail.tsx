@@ -11,7 +11,7 @@ export function EmailThumbnail({ email, onClick }: EmailThumbnailProps) {
   return (
     <div
       onClick={onClick}
-      className="group relative bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 overflow-hidden cursor-pointer hover:border-blue-500 dark:hover:border-blue-400 transition-all hover:shadow-lg"
+      className="group relative bg-white rounded-lg border border-slate-200 overflow-hidden cursor-pointer hover:border-blue-500 transition-all hover:shadow-lg"
     >
       {/* Email preview iframe */}
       <div className="relative w-full aspect-[3/4] overflow-hidden bg-white">
@@ -25,9 +25,9 @@ export function EmailThumbnail({ email, onClick }: EmailThumbnailProps) {
         </div>
         {/* Hover overlay */}
         <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors flex items-center justify-center">
-          <div className="opacity-0 group-hover:opacity-100 transition-opacity bg-white dark:bg-slate-800 rounded-full p-3 shadow-lg">
+          <div className="opacity-0 group-hover:opacity-100 transition-opacity bg-white rounded-full p-3 shadow-lg">
             <svg
-              className="w-6 h-6 text-slate-700 dark:text-slate-300"
+              className="w-6 h-6 text-slate-700"
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
@@ -44,11 +44,11 @@ export function EmailThumbnail({ email, onClick }: EmailThumbnailProps) {
       </div>
 
       {/* Metadata */}
-      <div className="p-3 border-t border-slate-200 dark:border-slate-700">
-        <h3 className="text-sm font-medium text-slate-900 dark:text-white line-clamp-2 mb-1">
+      <div className="p-3 border-t border-slate-200">
+        <h3 className="text-sm font-medium text-slate-900 line-clamp-2 mb-1">
           {email.email_subject || "No subject"}
         </h3>
-        <p className="text-xs text-slate-500 dark:text-slate-400">
+        <p className="text-xs text-slate-500">
           {new Date(email.scraped_at).toLocaleDateString("en-US", {
             month: "short",
             day: "numeric",
