@@ -35,3 +35,11 @@ export interface JobLog {
   level: JobLogLevel;
   created_at: string;
 }
+
+export interface ReportLead {
+  id: string;
+  email: string;
+  job_id: string;
+  brand_name: string;
+  created_at: string;
+}
