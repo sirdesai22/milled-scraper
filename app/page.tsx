@@ -19,6 +19,7 @@ export default function Home() {
   const [dateTo, setDateTo] = useState("");
   const [maxPages, setMaxPages] = useState(10);
   const [searchPageLimit, setSearchPageLimit] = useState(100);
+  const [maxEmailsToScrape, setMaxEmailsToScrape] = useState(3);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
@@ -38,6 +39,7 @@ export default function Home() {
         dateTo?: string;
         limit?: number;
         maxPages?: number;
+        maxEmailsToScrape?: number;
       } = { brandName: brandName.trim() };
       if (datePreset && datePreset !== "custom") {
         body.datePreset = datePreset;
@@ -48,6 +50,7 @@ export default function Home() {
       }
       body.maxPages = maxPages;
       body.limit = searchPageLimit;
+      body.maxEmailsToScrape = maxEmailsToScrape;
       const res = await fetch("/api/scrape", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -111,6 +114,7 @@ export default function Home() {
           dateTo={dateTo}
           maxPages={maxPages}
           searchPageLimit={searchPageLimit}
+          maxEmailsToScrape={maxEmailsToScrape}
           loading={loading}
           onBrandNameChange={setBrandName}
           onDatePresetChange={setDatePreset}
@@ -118,6 +122,7 @@ export default function Home() {
           onDateToChange={setDateTo}
           onMaxPagesChange={setMaxPages}
           onSearchPageLimitChange={setSearchPageLimit}
+          onMaxEmailsToScrapeChange={setMaxEmailsToScrape}
           onStartScrape={handleStartScrape}
         />
 

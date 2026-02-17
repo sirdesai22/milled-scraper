@@ -13,6 +13,7 @@ export async function POST(request: NextRequest) {
       dateTo,
       limit,
       maxPages,
+      maxEmailsToScrape,
     } = body as {
       brandName?: string;
       datePreset?: string;
@@ -20,6 +21,7 @@ export async function POST(request: NextRequest) {
       dateTo?: string;
       limit?: number;
       maxPages?: number;
+      maxEmailsToScrape?: number;
     };
 
     if (!brandName || typeof brandName !== "string") {
@@ -47,6 +49,7 @@ export async function POST(request: NextRequest) {
       ...(dateTo != null && { dateTo: String(dateTo) }),
       ...(typeof limit === "number" && limit > 0 && { limit: Math.min(limit, 100) }),
       ...(typeof maxPages === "number" && maxPages > 0 && { maxPages }),
+      ...(typeof maxEmailsToScrape === "number" && maxEmailsToScrape > 0 && { maxEmailsToScrape: Math.min(maxEmailsToScrape, 500) }),
     };
 
     const handle = await tasks.trigger<typeof scrapeBrandTask>(

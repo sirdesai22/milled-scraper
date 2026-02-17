@@ -18,6 +18,7 @@ interface ScrapeFormProps {
   dateTo: string;
   maxPages: number;
   searchPageLimit: number;
+  maxEmailsToScrape: number;
   loading: boolean;
   onBrandNameChange: (value: string) => void;
   onDatePresetChange: (value: string) => void;
@@ -25,6 +26,7 @@ interface ScrapeFormProps {
   onDateToChange: (value: string) => void;
   onMaxPagesChange: (value: number) => void;
   onSearchPageLimitChange: (value: number) => void;
+  onMaxEmailsToScrapeChange: (value: number) => void;
   onStartScrape: () => void;
 }
 
@@ -35,6 +37,7 @@ export function ScrapeForm({
   dateTo,
   maxPages,
   searchPageLimit,
+  maxEmailsToScrape,
   loading,
   onBrandNameChange,
   onDatePresetChange,
@@ -42,6 +45,7 @@ export function ScrapeForm({
   onDateToChange,
   onMaxPagesChange,
   onSearchPageLimitChange,
+  onMaxEmailsToScrapeChange,
   onStartScrape,
 }: ScrapeFormProps) {
   const showCustomRange = datePreset === "custom";
@@ -119,6 +123,21 @@ export function ScrapeForm({
                 max={100}
                 value={searchPageLimit}
                 onChange={(e) => onSearchPageLimitChange(Math.min(100, Math.max(1, parseInt(e.target.value, 10) || 1)))}
+                disabled={loading}
+                className="w-24 px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-900 dark:text-white text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 dark:focus:ring-indigo-400 dark:focus:border-indigo-400 disabled:opacity-60"
+              />
+            </div>
+            <div>
+              <label htmlFor="dev-max-emails" className="block text-xs text-slate-600 dark:text-slate-300 mb-1">
+                Max emails to scrape
+              </label>
+              <input
+                id="dev-max-emails"
+                type="number"
+                min={1}
+                max={500}
+                value={maxEmailsToScrape}
+                onChange={(e) => onMaxEmailsToScrapeChange(Math.min(500, Math.max(1, parseInt(e.target.value, 10) || 1)))}
                 disabled={loading}
                 className="w-24 px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-900 dark:text-white text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 dark:focus:ring-indigo-400 dark:focus:border-indigo-400 disabled:opacity-60"
               />

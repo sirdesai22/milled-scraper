@@ -43,6 +43,7 @@ interface ScrapeBrandPayload {
   dateTo?: string;
   limit?: number;
   maxPages?: number;
+  maxEmailsToScrape?: number;
 }
 
 type SendLogFn = (source: string, message: string, level?: "info" | "warn") => void;
@@ -138,7 +139,11 @@ export const scrapeBrandTask = task({
       dateTo,
       limit = SEARCH_PAGE_LIMIT,
       maxPages = DEFAULT_MAX_PAGES,
+      maxEmailsToScrape: payloadMaxEmails,
     } = payload;
+    const effectiveMaxEmails = payloadMaxEmails != null && payloadMaxEmails > 0
+      ? Math.min(payloadMaxEmails, 500)
+      : MAX_EMAILS_TO_SCRAPE;
     const effectiveLimit = Math.min(Math.max(1, limit), 100);
     const effectiveMaxPages = Math.max(1, Math.min(maxPages, 100));
 
@@ -383,11 +388,11 @@ export const scrapeBrandTask = task({
       }
 
       // Limit to max emails to scrape
-      const linksToScrape = emailLinks.slice(0, MAX_EMAILS_TO_SCRAPE);
-      if (emailLinks.length > MAX_EMAILS_TO_SCRAPE) {
+      const linksToScrape = emailLinks.slice(0, effectiveMaxEmails);
+      if (emailLinks.length > effectiveMaxEmails) {
         log(
           jobId,
-          `[scrape-brand]: Limiting to ${MAX_EMAILS_TO_SCRAPE} emails (found ${emailLinks.length})`
+          `[scrape-brand]: Limiting to ${effectiveMaxEmails} emails (found ${emailLinks.length})`
         );
       }
 
