@@ -161,12 +161,33 @@ Make sure to add all environment variables to your deployment platform.
 
 ## Troubleshooting
 
-### Browser download failures
-If you encounter errors during the build process, try setting a specific Playwright version in `trigger.config.ts`:
-
-```typescript
-playwright({ version: "1.40.0" })
+### "chromium-headless-shell" grep error on deploy
+If deploy fails with:
+```text
+RUN grep -A5 -m1 "browser: chromium-headless-shell" /tmp/browser-info.txt ... exit code 1
 ```
+the `@trigger.dev/build` Playwright extension expects an older `playwright install --dry-run` format. Fix it by patching the extension (run from repo root):
+```bash
+cd node_modules/@trigger.dev/build && patch -p1 < ../../../patches/@trigger.dev+build+4.3.3.patch && cd ../../..
+```
+If you don’t have the patch file, edit both files and change the grep pattern as follows.
+
+**Where to fix (both files):**
+- `node_modules/@trigger.dev/build/dist/esm/extensions/playwright.js` (around line 266)
+- `node_modules/@trigger.dev/build/dist/commonjs/extensions/playwright.js` (around line 269)
+
+**Change:** replace
+```js
+"browser: ${browser}"
+```
+with
+```js
+"${browser}"
+```
+inside the `instructions.push(\`RUN grep -A5 -m1 ...\`)` call. Then run `npx trigger.dev@latest deploy` again.
+
+### Other browser download failures
+For other build errors, you can try pinning Playwright in `trigger.config.ts`: `playwright({ version: "1.40.0" })`.
 
 ### Supabase connection issues
 - Verify your `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` are correct

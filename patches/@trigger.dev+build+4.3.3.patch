@@ -1,0 +1,24 @@
+diff --git a/dist/commonjs/extensions/playwright.js b/dist/commonjs/extensions/playwright.js
+--- a/dist/commonjs/extensions/playwright.js
++++ b/dist/commonjs/extensions/playwright.js
+@@ -266,7 +266,7 @@
+             }
+         });
+         Array.from(browsersToInstall).forEach((browser) => {
+-            instructions.push(`RUN grep -A5 -m1 "browser: ${browser}" /tmp/browser-info.txt > /tmp/${browser}-info.txt`, `RUN INSTALL_DIR=$(grep "Install location:" /tmp/${browser}-info.txt | cut -d':' -f2- | xargs) && \
++            instructions.push(`RUN grep -A5 -m1 "${browser}" /tmp/browser-info.txt > /tmp/${browser}-info.txt`, `RUN INSTALL_DIR=$(grep "Install location:" /tmp/${browser}-info.txt | cut -d':' -f2- | xargs) && \
+           DIR_NAME=$(basename "$INSTALL_DIR") && \
+           if [ -z "$DIR_NAME" ]; then echo "Failed to extract installation directory for ${browser}"; exit 1; fi && \
+           MS_DIR="/ms-playwright/$DIR_NAME" && \
+diff --git a/dist/esm/extensions/playwright.js b/dist/esm/extensions/playwright.js
+--- a/dist/esm/extensions/playwright.js
++++ b/dist/esm/extensions/playwright.js
+@@ -263,7 +263,7 @@
+             }
+         });
+         Array.from(browsersToInstall).forEach((browser) => {
+-            instructions.push(`RUN grep -A5 -m1 "browser: ${browser}" /tmp/browser-info.txt > /tmp/${browser}-info.txt`, `RUN INSTALL_DIR=$(grep "Install location:" /tmp/${browser}-info.txt | cut -d':' -f2- | xargs) && \
++            instructions.push(`RUN grep -A5 -m1 "${browser}" /tmp/browser-info.txt > /tmp/${browser}-info.txt`, `RUN INSTALL_DIR=$(grep "Install location:" /tmp/${browser}-info.txt | cut -d':' -f2- | xargs) && \
+           DIR_NAME=$(basename "$INSTALL_DIR") && \
+           if [ -z "$DIR_NAME" ]; then echo "Failed to extract installation directory for ${browser}"; exit 1; fi && \
+           MS_DIR="/ms-playwright/$DIR_NAME" && \

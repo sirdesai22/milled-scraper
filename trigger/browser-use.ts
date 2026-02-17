@@ -84,7 +84,7 @@ async function getBrowserUseBrowser(
     close: async () => {
       try {
         await browser.close();
-      } catch (e) {
+      } catch (e:any) {
         const msg = `[Browser Use]: Error closing browser: ${e}`;
         logger.warn(msg, e);
         sendLog?.("Browser Use", msg, "warn");
@@ -97,7 +97,7 @@ async function getBrowserUseBrowser(
         const msg3 = "[Browser Use]: Session stopped";
         logger.log(msg3);
         sendLog?.("Browser Use", msg3);
-      } catch (e) {
+      } catch (e:any) {
         const msg = `[Browser Use]: Error stopping session: ${e}`;
         logger.warn(msg, e);
         sendLog?.("Browser Use", msg, "warn");
