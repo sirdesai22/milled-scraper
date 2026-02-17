@@ -40,9 +40,9 @@ export const DEFAULT_REPORT_CONFIG = {
 
 export type ReportConfig = {
   overview: { perWeek: string; peak: string; period: string };
-  themes: Array<{ title: string; tags: string }>;
+  themes: ReadonlyArray<{ title: string; tags: string }>;
   subjectLines: { summary: string };
-  cadence: Array<{ label: string; desc: string }>;
+  cadence: ReadonlyArray<{ label: string; desc: string }>;
   offers: { summary: string };
   techStack: { email: string; sms: string };
   popups: { primary: string; secondary: string };
