@@ -23,6 +23,8 @@ export interface Email {
   email_subject: string | null;
   email_html: string;
   scraped_at: string;
+  /** When the campaign was sent (from Milled time element). */
+  sent_at: string | null;
 }
 
 export type JobLogLevel = "info" | "warn" | "error";

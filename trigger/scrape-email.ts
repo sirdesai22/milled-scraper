@@ -30,7 +30,7 @@ export const scrapeEmailTask = task({
   maxDuration: 600, // 10 minutes max per email
   queue: {
     // 1 at a time to stay within Browser Use Cloud concurrent session limit (avoids 429)
-    concurrencyLimit: 1,
+    concurrencyLimit: 20,
   },
   run: async (payload: ScrapeEmailPayload) => {
     const { emailUrl, brandName, jobId } = payload;
@@ -135,9 +135,16 @@ export const scrapeEmailTask = task({
         // Clean up the subject
         subject = subject.replace(" - Milled", "").trim();
 
+        // Sent-at time from Milled vendor panel (e.g. <time datetime="2026-02-18T20:00:44-05:00" data-message-target="vendorPanelSentAt">)
+        const sentAtEl = document.querySelector(
+          'time[data-message-target="vendorPanelSentAt"]'
+        ) as HTMLTimeElement | null;
+        const sentAt = sentAtEl?.getAttribute("datetime")?.trim() || null;
+
         return {
           emailHtml,
           subject,
+          sentAt,
         };
       });
 
@@ -161,6 +168,7 @@ export const scrapeEmailTask = task({
         email_url: emailUrl,
         email_subject: emailData.subject || null,
         email_html: emailData.emailHtml,
+        sent_at: emailData.sentAt ?? null,
       });
 
       if ("duplicate" in result && result.duplicate) {

@@ -78,6 +78,7 @@ export async function insertEmail(email: {
   email_url: string;
   email_subject: string | null;
   email_html: string;
+  sent_at?: string | null;
 }): Promise<{ email: Email } | { duplicate: true }> {
   const { data, error } = await supabase
     .from("emails")

@@ -41,15 +41,20 @@ export async function POST(request: NextRequest) {
       // job_logs table may not exist yet
     }
 
+    //convert limit, maxPages, maxEmailsToScrape to numbers if they are strings
+    const effectiveLimit = typeof limit === "string" ? parseInt(limit) : limit;
+    const effectiveMaxPages = typeof maxPages === "string" ? parseInt(maxPages) : maxPages;
+    const effectiveMaxEmailsToScrape = typeof maxEmailsToScrape === "string" ? parseInt(maxEmailsToScrape) : maxEmailsToScrape;
+
     const triggerPayload = {
       brandName: brandName.trim(),
       jobId: job.id,
       ...(datePreset != null && { datePreset: String(datePreset) }),
       ...(dateFrom != null && { dateFrom: String(dateFrom) }),
       ...(dateTo != null && { dateTo: String(dateTo) }),
-      ...(typeof limit === "number" && limit > 0 && { limit: Math.min(limit, 100) }),
-      ...(typeof maxPages === "number" && maxPages > 0 && { maxPages }),
-      ...(typeof maxEmailsToScrape === "number" && maxEmailsToScrape > 0 && { maxEmailsToScrape: Math.min(maxEmailsToScrape, 500) }),
+      ...(typeof effectiveLimit === "number" && effectiveLimit > 0 && { limit: Math.min(effectiveLimit, 100) }),
+      ...(typeof effectiveMaxPages === "number" && effectiveMaxPages > 0 && { maxPages: effectiveMaxPages }),
+      ...(typeof effectiveMaxEmailsToScrape === "number" && effectiveMaxEmailsToScrape > 0 && { maxEmailsToScrape: Math.min(effectiveMaxEmailsToScrape, 500) }),
     };
 
     const handle = await tasks.trigger<typeof scrapeBrandTask>(

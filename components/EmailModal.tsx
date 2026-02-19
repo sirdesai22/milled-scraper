@@ -52,11 +52,22 @@ export function EmailModal({
               {email.email_subject || "No subject"}
             </h2>
             <p className="text-sm text-slate-500">
-              {new Date(email.scraped_at).toLocaleDateString("en-US", {
-                month: "long",
-                day: "numeric",
-                year: "numeric",
-              })}
+              {email.sent_at
+                ? new Date(email.sent_at).toLocaleDateString("en-US", {
+                    month: "long",
+                    day: "numeric",
+                    year: "numeric",
+                  })
+                : new Date(email.scraped_at).toLocaleDateString("en-US", {
+                    month: "long",
+                    day: "numeric",
+                    year: "numeric",
+                  })}
+              {email.sent_at && (
+                <span className="ml-1 text-slate-400">
+                  ({new Date(email.sent_at).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })})
+                </span>
+              )}
             </p>
           </div>
 

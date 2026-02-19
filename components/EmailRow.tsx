@@ -33,7 +33,14 @@ export function EmailRow({ email }: EmailRowProps) {
             View email
           </a>
           <span className="text-xs text-slate-400">
-            {new Date(email.scraped_at).toLocaleTimeString()}
+            {email.sent_at
+              ? new Date(email.sent_at).toLocaleString("en-US", {
+                  month: "short",
+                  day: "numeric",
+                  hour: "numeric",
+                  minute: "2-digit",
+                })
+              : new Date(email.scraped_at).toLocaleTimeString()}
           </span>
         </div>
       </div>

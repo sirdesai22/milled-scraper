@@ -49,11 +49,17 @@ export function EmailThumbnail({ email, onClick }: EmailThumbnailProps) {
           {email.email_subject || "No subject"}
         </h3>
         <p className="text-xs text-slate-500">
-          {new Date(email.scraped_at).toLocaleDateString("en-US", {
-            month: "short",
-            day: "numeric",
-            year: "numeric",
-          })}
+          {email.sent_at
+            ? new Date(email.sent_at).toLocaleDateString("en-US", {
+                month: "short",
+                day: "numeric",
+                year: "numeric",
+              })
+            : new Date(email.scraped_at).toLocaleDateString("en-US", {
+                month: "short",
+                day: "numeric",
+                year: "numeric",
+              })}
         </p>
       </div>
     </div>

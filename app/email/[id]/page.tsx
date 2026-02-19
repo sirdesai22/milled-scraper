@@ -55,7 +55,17 @@ export default function EmailPage() {
               {email.email_subject || "No subject"}
             </h1>
             <p className="text-sm text-slate-500 truncate">
-              {email.brand_name} · {new Date(email.scraped_at).toLocaleString()}
+              {email.brand_name}
+              {" · "}
+              {email.sent_at
+                ? new Date(email.sent_at).toLocaleString("en-US", {
+                    month: "short",
+                    day: "numeric",
+                    year: "numeric",
+                    hour: "numeric",
+                    minute: "2-digit",
+                  })
+                : new Date(email.scraped_at).toLocaleString()}
             </p>
           </div>
           <div className="flex items-center gap-2 shrink-0">
