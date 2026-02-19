@@ -120,9 +120,18 @@ export const scrapeEmailTask = task({
           return null;
         }
 
-        // Get the outer HTML including the shadow root content
-        // The shadow root template is already in the HTML as <template shadowrootmode="open">
-        const emailHtml = emailCell.outerHTML;
+        // Serialize the whole element: outer shell + shadow root content (if any).
+        // element.outerHTML does NOT include programmatic shadow DOM, so we must serialize it manually.
+        let emailHtml: string;
+        if (emailCell.shadowRoot) {
+          const tag = emailCell.tagName.toLowerCase();
+          const attrs = Array.from(emailCell.attributes)
+            .map((a) => `${a.name}="${String(a.value).replace(/"/g, "&quot;")}"`)
+            .join(" ");
+          emailHtml = `<${tag}${attrs ? ` ${attrs}` : ""}>${emailCell.shadowRoot.innerHTML}</${tag}>`;
+        } else {
+          emailHtml = emailCell.outerHTML;
+        }
 
         // Try to extract subject from page title or meta tags
         let subject =
