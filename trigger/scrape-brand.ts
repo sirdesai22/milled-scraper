@@ -106,7 +106,7 @@ async function parseTotalResults(page: Page): Promise<number | null> {
   });
 }
 
-/** Extract campaign links from current search results page. */
+/** Extract campaign links from current page (vendor page: li a[data-turbo-frame="_top"] with pathname segment count 2). */
 async function extractLinksFromPage(page: Page): Promise<string[]> {
   return page.evaluate(() => {
     const seen = new Set<string>();
@@ -124,6 +124,23 @@ async function extractLinksFromPage(page: Page): Promise<string[]> {
       links.push(fullUrl);
     });
     return links;
+  });
+}
+
+const MILLED_ORIGIN = "https://milled.com";
+
+/** Get first vendor path from search page (turbo-frame[id^="vendors-"] → first li → first a[href]). Returns path with leading slash or null. */
+async function getFirstVendorPath(page: Page): Promise<string | null> {
+  return page.evaluate(() => {
+    const turboFrame = document.querySelector('turbo-frame[id^="vendors-"]');
+    if (!turboFrame) return null;
+    const firstLi = turboFrame.querySelector('.gallery-items li') ?? turboFrame.querySelector('li');
+    if (!firstLi) return null;
+    const firstLink = firstLi.querySelector('a[href]') as HTMLAnchorElement | null;
+    const href = firstLink?.getAttribute('href');
+    if (!href || href === '#') return null;
+    const path = href.startsWith('/') ? href : `/${href}`;
+    return path;
   });
 }
 
@@ -236,17 +253,6 @@ export const scrapeBrandTask = task({
         hitSecurityPage = false;
       }
 
-      const totalResults = await parseTotalResults(page);
-      const totalPages =
-        totalResults != null
-          ? Math.ceil(totalResults / effectiveLimit)
-          : 1;
-      const pagesToFetch = Math.min(effectiveMaxPages, totalPages);
-
-      if (totalResults != null) {
-        log(jobId, `[scrape-brand]: Emails (${totalResults} results), fetching up to ${pagesToFetch} page(s)`);
-      }
-
       const allLinks: string[] = [];
       const seenUrls = new Set<string>();
 
@@ -259,14 +265,63 @@ export const scrapeBrandTask = task({
         }
       }
 
-      log(jobId, "[scrape-brand]: Extracting email campaign links (page 1)");
+      log(jobId, "[scrape-brand]: Waiting for vendors turbo-frame");
+      try {
+        await page.waitForSelector('turbo-frame[id^="vendors-"]', { timeout: 15_000 });
+      } catch {
+        log(jobId, "[scrape-brand]: Vendors turbo-frame not found on search page", "warn");
+        await updateJob(jobId, { status: "failed", total_emails: 0, scraped_emails: 0 });
+        await page.close();
+        return {
+          success: false,
+          brandName,
+          reason: "Vendors list not found on search page.",
+          totalEmails: 0,
+          scrapedEmails: 0,
+        };
+      }
+
+      const firstVendorPath = await getFirstVendorPath(page);
+      if (!firstVendorPath) {
+        log(jobId, "[scrape-brand]: Could not get first vendor link from turbo-frame", "warn");
+        await updateJob(jobId, { status: "failed", total_emails: 0, scraped_emails: 0 });
+        await page.close();
+        return {
+          success: false,
+          brandName,
+          reason: "Vendors list not found on search page.",
+          totalEmails: 0,
+          scrapedEmails: 0,
+        };
+      }
+
+      const vendorUrl = MILLED_ORIGIN + (firstVendorPath.startsWith("/") ? firstVendorPath : `/${firstVendorPath}`);
+      log(jobId, `[scrape-brand]: Navigating to first vendor: ${vendorUrl}`);
+      await page.goto(vendorUrl, {
+        waitUntil: "domcontentloaded",
+        timeout: gotoTimeoutMs,
+      });
+      await randomDelay(1000, 3000, appLog);
+
+      const totalResults = await parseTotalResults(page);
+      const totalPages =
+        totalResults != null
+          ? Math.ceil(totalResults / effectiveLimit)
+          : 1;
+      const pagesToFetch = Math.min(effectiveMaxPages, totalPages);
+
+      if (totalResults != null) {
+        log(jobId, `[scrape-brand]: Vendor page — Emails (${totalResults} results), fetching up to ${pagesToFetch} page(s)`);
+      }
+
+      log(jobId, "[scrape-brand]: Extracting email campaign links from vendor page");
       addLinks(await extractLinksFromPage(page));
 
       for (let p = 2; p <= pagesToFetch; p++) {
         await randomDelay(500, 1500, appLog);
-        const pageUrl = buildSearchUrl(p);
-        log(jobId, `[scrape-brand]: Fetching page ${p}/${pagesToFetch}: ${pageUrl}`);
-        await page.goto(pageUrl, {
+        const vendorPageUrl = `${vendorUrl}${vendorUrl.includes("?") ? "&" : "?"}page=${p}`;
+        log(jobId, `[scrape-brand]: Fetching vendor page ${p}/${pagesToFetch}: ${vendorPageUrl}`);
+        await page.goto(vendorPageUrl, {
           waitUntil: "domcontentloaded",
           timeout: gotoTimeoutMs,
         });
@@ -276,14 +331,14 @@ export const scrapeBrandTask = task({
 
       let emailLinks = allLinks;
 
-      logger.log("[scrape-brand]: Aggregated pages", {
+      logger.log("[scrape-brand]: Aggregated vendor page(s)", {
         totalResults: totalResults ?? "unknown",
         pagesFetched: pagesToFetch,
         emailCampaignsFound: emailLinks.length,
       });
       log(
         jobId,
-        `[scrape-brand]: Aggregated ${emailLinks.length} campaigns from ${pagesToFetch} page(s)`
+        `[scrape-brand]: Aggregated ${emailLinks.length} campaigns from ${pagesToFetch} vendor page(s)`
       );
 
       const pageTitle = await page.title();
@@ -318,31 +373,53 @@ export const scrapeBrandTask = task({
             scrapedEmails: 0,
           };
         }
-        // Re-run aggregation after challenge solved (we're still on page 1)
-        const retryTotal = await parseTotalResults(page);
-        const retryTotalPages =
-          retryTotal != null ? Math.ceil(retryTotal / effectiveLimit) : 1;
-        const retryPagesToFetch = Math.min(effectiveMaxPages, retryTotalPages);
+        // Re-run flow: still on search page → wait for turbo-frame → navigate to first vendor → extract links
+        try {
+          await page.waitForSelector('turbo-frame[id^="vendors-"]', { timeout: 15_000 });
+        } catch {
+          await updateJob(jobId, {
+            status: "failed",
+            total_emails: 0,
+            scraped_emails: 0,
+          });
+          await page.close();
+          return {
+            success: false,
+            brandName,
+            reason: "After Cloudflare solve: vendors turbo-frame not found.",
+            totalEmails: 0,
+            scrapedEmails: 0,
+          };
+        }
+        const retryVendorPath = await getFirstVendorPath(page);
+        if (!retryVendorPath) {
+          await updateJob(jobId, {
+            status: "failed",
+            total_emails: 0,
+            scraped_emails: 0,
+          });
+          await page.close();
+          return {
+            success: false,
+            brandName,
+            reason: "After Cloudflare solve: could not get first vendor link.",
+            totalEmails: 0,
+            scrapedEmails: 0,
+          };
+        }
+        const retryVendorUrl = MILLED_ORIGIN + (retryVendorPath.startsWith("/") ? retryVendorPath : `/${retryVendorPath}`);
+        log(jobId, `[scrape-brand]: Navigating to first vendor (retry): ${retryVendorUrl}`);
+        await page.goto(retryVendorUrl, {
+          waitUntil: "domcontentloaded",
+          timeout: gotoTimeoutMs,
+        });
+        await randomDelay(1000, 3000, appLog);
         const retryLinks: string[] = [];
         const retrySeen = new Set<string>();
         for (const u of await extractLinksFromPage(page)) {
           if (!retrySeen.has(u)) {
             retrySeen.add(u);
             retryLinks.push(u);
-          }
-        }
-        for (let p = 2; p <= retryPagesToFetch; p++) {
-          await randomDelay(500, 1500, appLog);
-          await page.goto(buildSearchUrl(p), {
-            waitUntil: "domcontentloaded",
-            timeout: gotoTimeoutMs,
-          });
-          await randomDelay(1000, 2500, appLog);
-          for (const u of await extractLinksFromPage(page)) {
-            if (!retrySeen.has(u)) {
-              retrySeen.add(u);
-              retryLinks.push(u);
-            }
           }
         }
         if (retryLinks.length === 0) {
@@ -396,16 +473,15 @@ export const scrapeBrandTask = task({
         );
       }
 
-      // Log scraped page and email URLs we're going to scrape
-      logger.log("[scrape-brand]: Scraped search page", {
-        searchPageUrl: searchUrl,
+      // Log vendor page scrape and email URLs we're going to scrape
+      logger.log("[scrape-brand]: Scraped vendor page", {
         totalFound: emailLinks.length,
         willScrape: linksToScrape.length,
         emailUrls: linksToScrape,
       });
       log(
         jobId,
-        `[scrape-brand]: Scraped search page — totalFound=${emailLinks.length}, willScrape=${linksToScrape.length}`
+        `[scrape-brand]: Scraped vendor page — totalFound=${emailLinks.length}, willScrape=${linksToScrape.length}`
       );
       for (const url of linksToScrape) {
         log(jobId, `[scrape-brand]: Will scrape: ${url}`);
