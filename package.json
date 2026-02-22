@@ -12,6 +12,7 @@
   "dependencies": {
     "@supabase/supabase-js": "^2.95.3",
     "@trigger.dev/sdk": "4.4.1",
+    "@xyflow/react": "^12.10.1",
     "browser-use-sdk": "^2.0.15",
     "chromium-bidi": "^15.0.0",
     "next": "16.1.6",

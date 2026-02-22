@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { ScrapeJob, Email } from "@/lib/types";
-import { EmailGrid } from "@/components/EmailGrid";
+import { EmailFlowCanvas } from "@/components/EmailFlowCanvas";
 import { EmailModal } from "@/components/EmailModal";
 import { StrategyReport } from "@/components/StrategyReport";
 
@@ -256,9 +256,15 @@ export default function ReportViewPage() {
       </header>
 
       {/* Content */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 py-8">
+      <main
+        className={
+          activeTab === "emails"
+            ? "w-full py-6"
+            : "max-w-7xl mx-auto px-4 sm:px-6 py-8"
+        }
+      >
         {activeTab === "emails" && (
-          <EmailGrid
+          <EmailFlowCanvas
             emails={filteredEmails}
             onEmailClick={handleEmailClick}
           />
