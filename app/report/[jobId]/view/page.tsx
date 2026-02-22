@@ -263,15 +263,25 @@ export default function ReportViewPage() {
             : "max-w-7xl mx-auto px-4 sm:px-6 py-8"
         }
       >
-        {activeTab === "emails" && (
+        <div
+          className={activeTab === "emails" ? "block" : "hidden"}
+          aria-hidden={activeTab !== "emails"}
+        >
           <EmailFlowCanvas
             jobId={jobId}
             emails={filteredEmails}
             onEmailClick={handleEmailClick}
           />
-        )}
+        </div>
 
-        {activeTab === "strategy" && (
+        <div
+          className={
+            activeTab === "strategy"
+              ? "block"
+              : "hidden"
+          }
+          aria-hidden={activeTab !== "strategy"}
+        >
           <StrategyReport
             jobId={jobId}
             emailCount={filteredEmails.length}
@@ -279,7 +289,7 @@ export default function ReportViewPage() {
             onEmailClick={handleEmailClick}
             isAdmin={isAdmin}
           />
-        )}
+        </div>
       </main>
 
       {/* Email Modal */}

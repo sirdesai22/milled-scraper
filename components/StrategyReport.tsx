@@ -1,9 +1,33 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { Pencil, Trash2, Plus, X } from "lucide-react";
 import { Email } from "@/lib/types";
+import { getPreviewSnippet } from "@/lib/email-utils";
 import { EmailExampleThumbnail } from "./EmailExampleThumbnail";
-import { DEFAULT_REPORT_CONFIG, type ReportConfig } from "@/lib/report-config";
+import {
+  DEFAULT_REPORT_CONFIG,
+  DEFAULT_THEME_DESCRIPTION,
+  normalizeThemes,
+  type ReportConfig,
+  type RecurringTheme,
+} from "@/lib/report-config";
+
+function filterEmailsBySentAt(
+  emails: Email[],
+  dateFrom: string | null,
+  dateTo: string | null
+): Email[] {
+  if (!dateFrom && !dateTo) return emails;
+  return emails.filter((email) => {
+    const sentAt = email.sent_at;
+    if (!sentAt) return false;
+    const date = sentAt.slice(0, 10);
+    if (dateFrom && date < dateFrom) return false;
+    if (dateTo && date > dateTo) return false;
+    return true;
+  });
+}
 
 interface StrategyReportProps {
   jobId: string;
@@ -30,7 +54,10 @@ export function StrategyReport({
   const [configLoading, setConfigLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [dirty, setDirty] = useState(false);
-  const emailsByTheme = distributeEmails(emails, 5);
+  const [editingSection, setEditingSection] = useState<string | null>(null);
+  const [addEmailDrawerThemeIndex, setAddEmailDrawerThemeIndex] = useState<
+    number | null
+  >(null);
 
   useEffect(() => {
     async function loadConfig() {
@@ -40,7 +67,9 @@ export function StrategyReport({
         });
         if (res.ok) {
           const data = await res.json();
-          setConfig({ ...DEFAULT_REPORT_CONFIG, ...data });
+          const merged = { ...DEFAULT_REPORT_CONFIG, ...data };
+          merged.themes = normalizeThemes(merged.themes as Parameters<typeof normalizeThemes>[0]);
+          setConfig(merged);
         }
       } catch (e) {
         console.error("Failed to load config:", e);
@@ -82,6 +111,8 @@ export function StrategyReport({
     setDirty(true);
   }
 
+  const sectionEditable = (id: string) => isAdmin && editingSection === id;
+
   if (configLoading) {
     return (
       <div className="flex items-center justify-center py-20 text-slate-500">
@@ -107,15 +138,19 @@ export function StrategyReport({
 
       {/* Overview */}
       <section className="bg-white rounded-xl border border-slate-200 p-6">
-        <h2 className="text-2xl font-bold text-slate-900 mb-4">
-          Campaign Overview
-        </h2>
+        <SectionHeader
+          title="Campaign Overview"
+          sectionId="overview"
+          isAdmin={isAdmin}
+          editingSection={editingSection}
+          setEditingSection={setEditingSection}
+        />
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           <StatCard label="Campaigns" value={String(emailCount)} editable={false} />
           <StatCard
             label="Per Week"
             value={config.overview.perWeek}
-            editable={isAdmin}
+            editable={sectionEditable("overview")}
             onChange={(v) =>
               updateConfig("overview", { ...config.overview, perWeek: v })
             }
@@ -123,7 +158,7 @@ export function StrategyReport({
           <StatCard
             label="Peak"
             value={config.overview.peak}
-            editable={isAdmin}
+            editable={sectionEditable("overview")}
             onChange={(v) =>
               updateConfig("overview", { ...config.overview, peak: v })
             }
@@ -131,7 +166,7 @@ export function StrategyReport({
           <StatCard
             label="Period"
             value={config.overview.period}
-            editable={isAdmin}
+            editable={sectionEditable("overview")}
             onChange={(v) =>
               updateConfig("overview", { ...config.overview, period: v })
             }
@@ -141,11 +176,15 @@ export function StrategyReport({
 
       {/* Tech Stack */}
       <section className="bg-white rounded-xl border border-slate-200 p-6">
-        <h2 className="text-2xl font-bold text-slate-900 mb-4">
-          Tech Stack
-        </h2>
+        <SectionHeader
+          title="Tech Stack"
+          sectionId="techStack"
+          isAdmin={isAdmin}
+          editingSection={editingSection}
+          setEditingSection={setEditingSection}
+        />
         <div className="flex flex-wrap gap-2">
-          {isAdmin ? (
+          {sectionEditable("techStack") ? (
             <>
               <input
                 type="text"
@@ -183,69 +222,68 @@ export function StrategyReport({
         </div>
       </section>
 
-      {/* Themes */}
+      {/* Recurring Campaign Themes */}
       <section className="bg-white rounded-xl border border-slate-200 p-6">
-        <h2 className="text-2xl font-bold text-slate-900 mb-4">
-          Recurring Campaign Themes
-        </h2>
+        <SectionHeader
+          title="Recurring Campaign Themes"
+          sectionId="themes"
+          isAdmin={isAdmin}
+          editingSection={editingSection}
+          setEditingSection={setEditingSection}
+        />
         <div className="space-y-6">
           {config.themes.map((theme, i) => (
-            <div key={i} className="space-y-3">
-              <div className="flex items-baseline justify-between gap-4 flex-wrap">
-                {isAdmin ? (
-                  <input
-                    type="text"
-                    value={theme.title}
-                    onChange={(e) => {
-                      const next = [...config.themes];
-                      next[i] = { ...next[i], title: e.target.value };
-                      updateConfig("themes", next);
-                    }}
-                    className="flex-1 min-w-[200px] text-lg font-semibold bg-slate-50 border border-slate-300 rounded px-2 py-1 focus:ring-2 focus:ring-blue-500 focus:outline-none"
-                  />
-                ) : (
-                  <h3 className="text-lg font-semibold text-slate-900">
-                    {theme.title}
-                  </h3>
-                )}
-                {isAdmin ? (
-                  <input
-                    type="text"
-                    value={theme.tags}
-                    onChange={(e) => {
-                      const next = [...config.themes];
-                      next[i] = { ...next[i], tags: e.target.value };
-                      updateConfig("themes", next);
-                    }}
-                    className="flex-1 min-w-[200px] text-sm bg-slate-50 border border-slate-300 rounded px-2 py-1 text-slate-600 focus:ring-2 focus:ring-blue-500 focus:outline-none"
-                  />
-                ) : (
-                  <p className="text-sm text-slate-500 shrink-0">
-                    {theme.tags}
-                  </p>
-                )}
-              </div>
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
-                {(emailsByTheme[i] || []).slice(0, 5).map((email) => (
-                  <EmailExampleThumbnail
-                    key={email.id}
-                    email={email}
-                    onClick={() => onEmailClick(emails.indexOf(email))}
-                  />
-                ))}
-              </div>
-            </div>
+            <ThemeCard
+              key={i}
+              theme={theme}
+              index={i}
+              emails={emails}
+              isEditing={sectionEditable("themes")}
+              onEmailClick={onEmailClick}
+              onUpdateTheme={(patch) => {
+                const next = config.themes.map((t, j) =>
+                  j === i ? { ...t, ...patch } : t
+                );
+                updateConfig("themes", next);
+              }}
+              onRemove={() => {
+                const next = config.themes.filter((_, j) => j !== i);
+                updateConfig("themes", next);
+              }}
+              onOpenAddEmailDrawer={() => setAddEmailDrawerThemeIndex(i)}
+            />
           ))}
+          {sectionEditable("themes") && (
+            <button
+              type="button"
+              onClick={() => {
+                const newTheme: RecurringTheme = {
+                  title: "New theme",
+                  description: DEFAULT_THEME_DESCRIPTION,
+                  emailIds: [],
+                };
+                updateConfig("themes", [...config.themes, newTheme]);
+              }}
+              className="flex items-center gap-2 px-4 py-2 rounded-lg border border-dashed border-slate-300 text-slate-600 hover:bg-slate-50 hover:border-slate-400 text-sm font-medium"
+            >
+              <Plus className="w-4 h-4" />
+              Add new theme
+            </button>
+          )}
         </div>
       </section>
 
       {/* Subject Lines */}
       <section className="bg-white rounded-xl border border-slate-200 p-6">
-        <h2 className="text-2xl font-bold text-slate-900 mb-4">
-          Subject Line Patterns
-        </h2>
+        <SectionHeader
+          title="Subject Line Patterns"
+          sectionId="subjectLines"
+          isAdmin={isAdmin}
+          editingSection={editingSection}
+          setEditingSection={setEditingSection}
+        />
         <div className="space-y-4">
-          {isAdmin ? (
+          {sectionEditable("subjectLines") ? (
             <input
               type="text"
               value={config.subjectLines.summary}
@@ -291,16 +329,20 @@ export function StrategyReport({
 
       {/* Cadence */}
       <section className="bg-white rounded-xl border border-slate-200 p-6">
-        <h2 className="text-2xl font-bold text-slate-900 mb-4">
-          Campaign Cadence
-        </h2>
+        <SectionHeader
+          title="Campaign Cadence"
+          sectionId="cadence"
+          isAdmin={isAdmin}
+          editingSection={editingSection}
+          setEditingSection={setEditingSection}
+        />
         <div className="flex flex-wrap gap-3">
           {config.cadence.map((item, i) => (
             <div
               key={i}
               className="rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 min-w-[100px]"
             >
-              {isAdmin ? (
+              {sectionEditable("cadence") ? (
                 <div className="space-y-1">
                   <input
                     type="text"
@@ -340,11 +382,15 @@ export function StrategyReport({
 
       {/* Offers */}
       <section className="bg-white rounded-xl border border-slate-200 p-6">
-        <h2 className="text-2xl font-bold text-slate-900 mb-4">
-          Offer Structure
-        </h2>
+        <SectionHeader
+          title="Offer Structure"
+          sectionId="offers"
+          isAdmin={isAdmin}
+          editingSection={editingSection}
+          setEditingSection={setEditingSection}
+        />
         <div className="space-y-4">
-          {isAdmin ? (
+          {sectionEditable("offers") ? (
             <input
               type="text"
               value={config.offers.summary}
@@ -372,11 +418,15 @@ export function StrategyReport({
 
       {/* Design & Layout Choices */}
       <section className="bg-white rounded-xl border border-slate-200 p-6">
-        <h2 className="text-2xl font-bold text-slate-900 mb-4">
-          Design & Layout Choices
-        </h2>
+        <SectionHeader
+          title="Design & Layout Choices"
+          sectionId="designLayout"
+          isAdmin={isAdmin}
+          editingSection={editingSection}
+          setEditingSection={setEditingSection}
+        />
         <div className="space-y-4">
-          {isAdmin ? (
+          {sectionEditable("designLayout") ? (
             <input
               type="text"
               value={config.designLayout.summary}
@@ -395,11 +445,15 @@ export function StrategyReport({
 
       {/* Voice and Storytelling Observations */}
       <section className="bg-white rounded-xl border border-slate-200 p-6">
-        <h2 className="text-2xl font-bold text-slate-900 mb-4">
-          Voice and Storytelling Observations
-        </h2>
+        <SectionHeader
+          title="Voice and Storytelling Observations"
+          sectionId="voiceStorytelling"
+          isAdmin={isAdmin}
+          editingSection={editingSection}
+          setEditingSection={setEditingSection}
+        />
         <div className="space-y-4">
-          {isAdmin ? (
+          {sectionEditable("voiceStorytelling") ? (
             <input
               type="text"
               value={config.voiceStorytelling.summary}
@@ -418,11 +472,15 @@ export function StrategyReport({
 
       {/* Popups */}
       <section className="bg-white rounded-xl border border-slate-200 p-6">
-        <h2 className="text-2xl font-bold text-slate-900 mb-4">
-          Popups
-        </h2>
+        <SectionHeader
+          title="Popups"
+          sectionId="popups"
+          isAdmin={isAdmin}
+          editingSection={editingSection}
+          setEditingSection={setEditingSection}
+        />
         <div className="rounded-lg border border-slate-200 bg-slate-50 p-4">
-          {isAdmin ? (
+          {sectionEditable("popups") ? (
             <div className="space-y-2">
               <input
                 type="text"
@@ -473,6 +531,299 @@ export function StrategyReport({
           </button>
         </div>
       )}
+
+      {addEmailDrawerThemeIndex !== null && (
+        <AddEmailDrawer
+          themeTitle={config.themes[addEmailDrawerThemeIndex]?.title ?? "Theme"}
+          emails={emails}
+          excludeEmailIds={config.themes[addEmailDrawerThemeIndex]?.emailIds ?? []}
+          onSelectEmail={(id) => {
+            const theme = config.themes[addEmailDrawerThemeIndex];
+            if (!theme) return;
+            const next = config.themes.map((t, j) =>
+              j === addEmailDrawerThemeIndex
+                ? { ...t, emailIds: [...t.emailIds, id] }
+                : t
+            );
+            updateConfig("themes", next);
+          }}
+          onClose={() => setAddEmailDrawerThemeIndex(null)}
+        />
+      )}
+    </div>
+  );
+}
+
+function AddEmailDrawer({
+  themeTitle,
+  emails,
+  excludeEmailIds,
+  onSelectEmail,
+  onClose,
+}: {
+  themeTitle: string;
+  emails: Email[];
+  excludeEmailIds: string[];
+  onSelectEmail: (id: string) => void;
+  onClose: () => void;
+}) {
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
+  const [searchQuery, setSearchQuery] = useState("");
+
+  const filteredEmails = useMemo(() => {
+    let list = filterEmailsBySentAt(
+      emails,
+      dateFrom || null,
+      dateTo || null
+    );
+    list = list.filter((e) => !excludeEmailIds.includes(e.id));
+    if (searchQuery.trim()) {
+      const q = searchQuery.trim().toLowerCase();
+      list = list.filter((email) => {
+        const subject = (email.email_subject ?? "").toLowerCase();
+        const preview = getPreviewSnippet(email.email_html, 500).toLowerCase();
+        return subject.includes(q) || preview.includes(q);
+      });
+    }
+    return list;
+  }, [emails, dateFrom, dateTo, searchQuery, excludeEmailIds]);
+
+  return (
+    <>
+      <div
+        className="fixed inset-0 bg-black/30 z-40"
+        aria-hidden
+        onClick={onClose}
+      />
+      <div
+        className="fixed top-0 right-0 bottom-0 w-full max-w-2xl bg-white shadow-xl z-50 flex flex-col"
+        role="dialog"
+        aria-labelledby="add-email-drawer-title"
+      >
+        <div className="shrink-0 flex items-center justify-between gap-4 p-4 border-b border-slate-200">
+          <h2
+            id="add-email-drawer-title"
+            className="text-lg font-semibold text-slate-900"
+          >
+            Add email to “{themeTitle}”
+          </h2>
+          <button
+            type="button"
+            onClick={onClose}
+            className="p-2 rounded-lg text-slate-500 hover:bg-slate-100"
+            aria-label="Close"
+          >
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+
+        <div className="shrink-0 flex flex-col gap-3 p-4 border-b border-slate-200 bg-slate-50">
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs font-medium text-slate-500 mb-1">
+                From date
+              </label>
+              <input
+                type="date"
+                value={dateFrom}
+                onChange={(e) => setDateFrom(e.target.value)}
+                className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-slate-500 mb-1">
+                To date
+              </label>
+              <input
+                type="date"
+                value={dateTo}
+                onChange={(e) => setDateTo(e.target.value)}
+                className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
+              />
+            </div>
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-slate-500 mb-1">
+              Search
+            </label>
+            <input
+              type="search"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Subject or preview…"
+              className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
+            />
+          </div>
+        </div>
+
+        <div className="flex-1 overflow-auto p-4">
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+            {filteredEmails.map((email) => (
+              <div
+                key={email.id}
+                className="cursor-pointer"
+                onClick={() => onSelectEmail(email.id)}
+              >
+                <EmailExampleThumbnail
+                  email={email}
+                  onClick={() => onSelectEmail(email.id)}
+                />
+              </div>
+            ))}
+          </div>
+          {filteredEmails.length === 0 && (
+            <p className="text-sm text-slate-500 py-8 text-center">
+              No emails match the filters, or all have been added.
+            </p>
+          )}
+        </div>
+      </div>
+    </>
+  );
+}
+
+function SectionHeader({
+  title,
+  sectionId,
+  isAdmin,
+  editingSection,
+  setEditingSection,
+}: {
+  title: string;
+  sectionId: string;
+  isAdmin: boolean;
+  editingSection: string | null;
+  setEditingSection: (id: string | null) => void;
+}) {
+  const isEditing = editingSection === sectionId;
+  return (
+    <div className="flex items-center justify-between gap-4 mb-4">
+      <h2 className="text-2xl font-bold text-slate-900">{title}</h2>
+      {isAdmin && (
+        <button
+          type="button"
+          onClick={() => setEditingSection(isEditing ? null : sectionId)}
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-300 text-slate-700 hover:bg-slate-50 text-sm font-medium"
+        >
+          <Pencil className="w-4 h-4" />
+          {isEditing ? "Done" : "Edit"}
+        </button>
+      )}
+    </div>
+  );
+}
+
+function ThemeCard({
+  theme,
+  index,
+  emails,
+  isEditing,
+  onEmailClick,
+  onUpdateTheme,
+  onRemove,
+  onOpenAddEmailDrawer,
+}: {
+  theme: RecurringTheme;
+  index: number;
+  emails: Email[];
+  isEditing: boolean;
+  onEmailClick: (index: number) => void;
+  onUpdateTheme: (patch: Partial<RecurringTheme>) => void;
+  onRemove: () => void;
+  onOpenAddEmailDrawer?: () => void;
+}) {
+  const emailsById = new Map(emails.map((e) => [e.id, e]));
+  const themeEmails = theme.emailIds
+    .map((id) => emailsById.get(id))
+    .filter(Boolean) as Email[];
+  const availableToAdd = emails.filter((e) => !theme.emailIds.includes(e.id));
+
+  return (
+    <div className="rounded-xl border border-slate-200 bg-slate-50/50 p-5 space-y-4">
+      <div className="flex items-start justify-between gap-4">
+        <div className="flex-1 min-w-0">
+          {isEditing ? (
+            <input
+              type="text"
+              value={theme.title}
+              onChange={(e) => onUpdateTheme({ title: e.target.value })}
+              className="w-full text-lg font-semibold bg-white border border-slate-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:outline-none"
+              placeholder="Theme title"
+            />
+          ) : (
+            <h3 className="text-lg font-semibold text-slate-900">
+              {theme.title}
+            </h3>
+          )}
+        </div>
+        {isEditing && (
+          <button
+            type="button"
+            onClick={onRemove}
+            title="Delete theme"
+            className="shrink-0 p-2 rounded-lg text-slate-500 hover:bg-red-50 hover:text-red-600 transition-colors"
+          >
+            <Trash2 className="w-4 h-4" />
+          </button>
+        )}
+      </div>
+
+      <div>
+        {isEditing ? (
+          <textarea
+            value={theme.description}
+            onChange={(e) => onUpdateTheme({ description: e.target.value })}
+            rows={6}
+            className="w-full text-sm bg-white border border-slate-300 rounded-lg px-3 py-2 text-slate-700 focus:ring-2 focus:ring-blue-500 focus:outline-none resize-y"
+            placeholder="Pattern and description…"
+          />
+        ) : (
+          <p className="text-sm text-slate-600 whitespace-pre-wrap">
+            {theme.description || "—"}
+          </p>
+        )}
+      </div>
+
+      <div>
+        <p className="text-xs font-medium text-slate-500 uppercase tracking-wide mb-2">
+          Emails
+        </p>
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+          {themeEmails.map((email) => (
+            <div key={email.id} className="relative group">
+              <EmailExampleThumbnail
+                email={email}
+                onClick={() => onEmailClick(emails.indexOf(email))}
+              />
+              {isEditing && (
+                <button
+                  type="button"
+                  onClick={() =>
+                    onUpdateTheme({
+                      emailIds: theme.emailIds.filter((id) => id !== email.id),
+                    })
+                  }
+                  className="absolute top-1 right-1 p-1 rounded bg-red-500 text-white opacity-0 group-hover:opacity-100 transition-opacity"
+                  title="Remove email"
+                >
+                  <Trash2 className="w-3 h-3" />
+                </button>
+              )}
+            </div>
+          ))}
+          {isEditing && (
+            <button
+              type="button"
+              onClick={onOpenAddEmailDrawer}
+              className="flex items-center justify-center gap-2 rounded-lg border-2 border-dashed border-slate-300 bg-white min-h-[100px] text-slate-600 hover:border-slate-400 hover:bg-slate-50 transition-colors"
+            >
+              <Plus className="w-5 h-5" />
+              Add email
+            </button>
+          )}
+        </div>
+      </div>
     </div>
   );
 }

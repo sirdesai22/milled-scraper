@@ -14,6 +14,7 @@ import {
   type ReactFlowInstance,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
+import { Lock, LockOpen, Expand, RotateCcw } from "lucide-react";
 import { Email } from "@/lib/types";
 import { EmailNode, type EmailNodeData } from "./EmailNode";
 
@@ -205,40 +206,40 @@ function EmailFlowCanvasInner({
   }
 
   return (
-    <div className="w-full flex flex-col gap-3">
-      <div className="flex items-center gap-4 px-1">
-        <label className="flex items-center gap-2 cursor-pointer select-none">
-          <input
-            type="checkbox"
-            checked={lockDrag}
-            onChange={(e) => setLockDrag(e.target.checked)}
-            className="rounded border-slate-300 text-blue-600 focus:ring-blue-500"
-          />
-          <span className="text-sm font-medium text-slate-700">
-            Lock drag
-          </span>
-        </label>
-        <label className="flex items-center gap-2 cursor-pointer select-none">
-          <input
-            type="checkbox"
-            checked={showFullEmail}
-            onChange={(e) => setShowFullEmail(e.target.checked)}
-            className="rounded border-slate-300 text-blue-600 focus:ring-blue-500"
-          />
-          <span className="text-sm font-medium text-slate-700">
-            Show full email
-          </span>
-        </label>
-        <button
-          type="button"
-          onClick={handleResetPositions}
-          className="px-3 py-1.5 text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-md hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1"
-        >
-          Reset
-        </button>
-      </div>
-      <div className="w-full h-[calc(100vh-320px)] min-h-[500px] bg-slate-100/50 rounded-lg overflow-hidden">
-        <ReactFlow
+    <div className="w-full flex flex-col">
+      <div className="relative w-full h-[calc(100vh-280px)] min-h-[500px]">
+        <div className="absolute left-3 top-3 z-10 flex flex-col gap-2 rounded-lg border border-slate-200 bg-white/95 shadow-md p-1.5 backdrop-blur-sm">
+          <button
+            type="button"
+            onClick={() => setLockDrag((v) => !v)}
+            title={lockDrag ? "Unlock drag" : "Lock drag"}
+            className={`flex items-center justify-center w-9 h-9 rounded-md transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1 ${lockDrag ? "bg-slate-200 text-slate-700" : "text-slate-600 hover:bg-slate-100"}`}
+          >
+            {lockDrag ? (
+              <Lock className="w-5 h-5" strokeWidth={2} />
+            ) : (
+              <LockOpen className="w-5 h-5" strokeWidth={2} />
+            )}
+          </button>
+          <button
+            type="button"
+            onClick={() => setShowFullEmail((v) => !v)}
+            title={showFullEmail ? "Card view" : "Show full email"}
+            className={`flex items-center justify-center w-9 h-9 rounded-md transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1 ${showFullEmail ? "bg-blue-100 text-blue-700" : "text-slate-600 hover:bg-slate-100"}`}
+          >
+            <Expand className="w-5 h-5" strokeWidth={2} />
+          </button>
+          <button
+            type="button"
+            onClick={handleResetPositions}
+            title="Reset layout"
+            className="flex items-center justify-center w-9 h-9 rounded-md text-slate-600 hover:bg-slate-100 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1"
+          >
+            <RotateCcw className="w-5 h-5" strokeWidth={2} />
+          </button>
+        </div>
+        <div className="w-full h-full bg-slate-100/50 rounded-lg overflow-hidden">
+          <ReactFlow
         onInit={(instance) => {
           reactFlowRef.current = instance;
         }}
@@ -262,6 +263,7 @@ function EmailFlowCanvasInner({
         nodesDraggable={!lockDrag}
         className="bg-slate-100/50"
         />
+        </div>
       </div>
     </div>
   );
