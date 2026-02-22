@@ -172,20 +172,22 @@ export default function ReportViewPage() {
               </p>
             </div>
             <div className="flex items-center gap-3">
-              <button
+              {/* <button
                 type="button"
                 onClick={() => window.open(`/report/${jobId}/print`, "_blank")}
                 className="px-3 py-2 rounded-lg border border-slate-300 bg-white text-sm text-slate-700 hover:bg-slate-50 transition-colors"
               >
                 Preview PDF
-              </button>
-              <button
-                type="button"
-                onClick={() => router.push("/")}
-                className="text-sm text-slate-600 hover:text-slate-900"
-              >
-                Back to Home
-              </button>
+              </button> */}
+              {isAdmin && (
+                <button
+                  type="button"
+                  onClick={() => router.push("/")}
+                  className="text-sm text-slate-600 hover:text-slate-900"
+                >
+                  Back to Home
+                </button>
+              )}
             </div>
           </div>
 

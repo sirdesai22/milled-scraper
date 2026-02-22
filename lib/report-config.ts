@@ -59,7 +59,21 @@ export const DEFAULT_REPORT_CONFIG = {
     },
   ] as RecurringTheme[],
   subjectLines: {
-    summary: "35–55 chars • Urgency • Sale/Discount • Product names front-loaded",
+    summary: `Common Promo Types:
+
+Percentage off: Most common, including "Up to 60% off," "Extra 40% off," and "30% off in the app".
+
+Threshold discounts: For example, "$30 off orders $100+" using specific codes like SCORE.
+
+Gift card value adds: Such as "Spend $75, get $100 gift card".
+
+Price point messaging: Highlighting items like "Shoes for $80 and under".
+
+Offer Laddering: Adidas does not use progressive discount laddering; single-tier thresholds are the standard.
+
+Free Shipping: This is not prominently featured in emails and is tied to adiclub membership as a loyalty benefit.
+
+Loyalty Integration: adiclub is heavily integrated with exclusive perks like member-only products, early access, and app-exclusive discounts (e.g., "Members save 30% in the app").`,
   },
   cadence: [
     { label: "Wed/Thu", desc: "Mid-week" },
@@ -70,17 +84,35 @@ export const DEFAULT_REPORT_CONFIG = {
     { label: "Nov–Dec", desc: "Peak" },
   ],
   offers: {
-    summary: "% off • Threshold • Gift cards • Single-tier (no laddering)",
+    summary: `Common Promo Types: Most frequent are percentage-off deals (e.g., "Up to 60% off"), threshold discounts like "$30 off orders $100+", and gift card value adds.
+
+Offer Laddering: Adidas typically uses single-tier thresholds and does not utilize progressive discount laddering during sales.
+
+Loyalty Integration: Rewards are heavily integrated, featuring member-only products, early access, and app-exclusive discounts (e.g., 30% off in-app).
+
+Free Shipping: This is tied to adiclub membership as a loyalty benefit rather than being prominently featured in general promotional emails.`,
   },
   techStack: {
     email: "SFMC",
     sms: "SFMC",
   },
   designLayout: {
-    summary: "Single-column • Hero image • Clear CTA placement • Mobile-first",
+    summary: `Format: Emails are 100% designed/HTML; no plain text versions were observed.
+
+Urgency: Countdown timer GIFs are frequently used for flash sales and major events like Black Friday.
+
+Optimization: Emails use single-column, fully responsive layouts for mobile but are not specifically optimized for dark mode.
+
+Social Proof: Minimal reliance on reviews; the strategy focuses instead on brand strength and athlete partnerships.`,
   },
   voiceStorytelling: {
-    summary: "Direct tone • Benefit-led • Urgency language • Brand voice consistent",
+    summary: `Character Count: Subject lines are concise, typically ranging from 35-55 characters.
+
+Front-loaded Keywords: Focuses on product names (Samba, Gazelle), sale terms, and collaboration names (Bad Bunny, Pharrell).
+
+Hook Styles: Tactics include urgency (e.g., "The clock is ticking..."), celebrity endorsements, and benefit-focused language.
+
+Preview Text: Used to reinforce urgency or expand on benefits mentioned in the subject line.`,
   },
   popups: {
     primary: "Log in / Sign up • Social sign-in • Member benefits",

@@ -284,46 +284,19 @@ export function StrategyReport({
         />
         <div className="space-y-4">
           {sectionEditable("subjectLines") ? (
-            <input
-              type="text"
+            <textarea
               value={config.subjectLines.summary}
               onChange={(e) =>
                 updateConfig("subjectLines", { summary: e.target.value })
               }
-              className="w-full text-sm bg-slate-50 border border-slate-300 rounded px-3 py-2 text-slate-600 focus:ring-2 focus:ring-blue-500 focus:outline-none"
+              rows={14}
+              className="w-full text-sm bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 text-slate-600 focus:ring-2 focus:ring-blue-500 focus:outline-none resize-y"
             />
           ) : (
-            <p className="text-sm text-slate-600">
+            <p className="text-sm text-slate-600 whitespace-pre-wrap">
               {config.subjectLines.summary}
             </p>
           )}
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
-            {emails.slice(0, 8).map((email, i) => (
-              <button
-                key={email.id}
-                type="button"
-                onClick={() => onEmailClick(i)}
-                className="group text-left rounded-lg border border-slate-200 overflow-hidden bg-white hover:border-blue-500 transition-all"
-              >
-                <div className="relative aspect-[3/4] overflow-hidden bg-white">
-                  <div className="absolute inset-0 scale-[0.22] origin-top-left w-[450%] h-[450%] pointer-events-none">
-                    <iframe
-                      srcDoc={email.email_html}
-                      sandbox="allow-same-origin"
-                      className="w-full h-full border-0"
-                      style={{ pointerEvents: "none" }}
-                    />
-                  </div>
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent" />
-                  <div className="absolute bottom-0 left-0 right-0 p-3">
-                    <p className="text-xs font-medium text-white line-clamp-2 drop-shadow-sm">
-                      {email.email_subject || "No subject"}
-                    </p>
-                  </div>
-                </div>
-              </button>
-            ))}
-          </div>
         </div>
       </section>
 
@@ -391,28 +364,19 @@ export function StrategyReport({
         />
         <div className="space-y-4">
           {sectionEditable("offers") ? (
-            <input
-              type="text"
+            <textarea
               value={config.offers.summary}
               onChange={(e) =>
                 updateConfig("offers", { summary: e.target.value })
               }
-              className="w-full text-sm bg-slate-50 border border-slate-300 rounded px-3 py-2 text-slate-600 focus:ring-2 focus:ring-blue-500 focus:outline-none"
+              rows={10}
+              className="w-full text-sm bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 text-slate-600 focus:ring-2 focus:ring-blue-500 focus:outline-none resize-y"
             />
           ) : (
-            <p className="text-sm text-slate-600">
+            <p className="text-sm text-slate-600 whitespace-pre-wrap">
               {config.offers.summary}
             </p>
           )}
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
-            {emails.slice(0, 6).map((email, i) => (
-              <EmailExampleThumbnail
-                key={email.id}
-                email={email}
-                onClick={() => onEmailClick(i)}
-              />
-            ))}
-          </div>
         </div>
       </section>
 
@@ -427,16 +391,16 @@ export function StrategyReport({
         />
         <div className="space-y-4">
           {sectionEditable("designLayout") ? (
-            <input
-              type="text"
+            <textarea
               value={config.designLayout.summary}
               onChange={(e) =>
                 updateConfig("designLayout", { summary: e.target.value })
               }
-              className="w-full text-sm bg-slate-50 border border-slate-300 rounded px-3 py-2 text-slate-600 focus:ring-2 focus:ring-blue-500 focus:outline-none"
+              rows={10}
+              className="w-full text-sm bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 text-slate-600 focus:ring-2 focus:ring-blue-500 focus:outline-none resize-y"
             />
           ) : (
-            <p className="text-sm text-slate-600">
+            <p className="text-sm text-slate-600 whitespace-pre-wrap">
               {config.designLayout.summary}
             </p>
           )}
@@ -454,16 +418,16 @@ export function StrategyReport({
         />
         <div className="space-y-4">
           {sectionEditable("voiceStorytelling") ? (
-            <input
-              type="text"
+            <textarea
               value={config.voiceStorytelling.summary}
               onChange={(e) =>
                 updateConfig("voiceStorytelling", { summary: e.target.value })
               }
-              className="w-full text-sm bg-slate-50 border border-slate-300 rounded px-3 py-2 text-slate-600 focus:ring-2 focus:ring-blue-500 focus:outline-none"
+              rows={10}
+              className="w-full text-sm bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 text-slate-600 focus:ring-2 focus:ring-blue-500 focus:outline-none resize-y"
             />
           ) : (
-            <p className="text-sm text-slate-600">
+            <p className="text-sm text-slate-600 whitespace-pre-wrap">
               {config.voiceStorytelling.summary}
             </p>
           )}
