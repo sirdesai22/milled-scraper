@@ -8,15 +8,17 @@ import { getPreviewSnippet } from "@/lib/email-utils";
 export type EmailNodeData = {
   email: Email;
   onOpen: () => void;
+  width?: number;
 };
 
 export type EmailFlowNode = Node<EmailNodeData, "email">;
 
-const NODE_WIDTH = 420;
-const NODE_HEIGHT = 720;
+const DEFAULT_NODE_WIDTH = 420;
+const NODE_HEIGHT = 960;
 
 function EmailNodeComponent({ data }: NodeProps<EmailFlowNode>) {
-  const { email, onOpen } = data;
+  const { email, onOpen, width } = data;
+  const nodeWidth = width ?? DEFAULT_NODE_WIDTH;
   const preview = getPreviewSnippet(email.email_html, 120);
   const sentAt = email.sent_at
     ? new Date(email.sent_at).toLocaleDateString("en-US", {
@@ -33,7 +35,7 @@ function EmailNodeComponent({ data }: NodeProps<EmailFlowNode>) {
   return (
     <div
       className="bg-white rounded-xl border-2 border-slate-200 shadow-lg overflow-hidden flex flex-col"
-      style={{ width: NODE_WIDTH, height: NODE_HEIGHT }}
+      style={{ width: nodeWidth, height: NODE_HEIGHT }}
     >
       <div className="email-node-drag-handle p-3 border-b border-slate-200 bg-slate-50 shrink-0 cursor-grab active:cursor-grabbing">
         <p className="text-xs font-medium text-slate-500 uppercase tracking-wide mb-0.5">
