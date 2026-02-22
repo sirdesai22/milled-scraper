@@ -190,7 +190,7 @@ export default function ReportViewPage() {
           </div>
 
           {/* Date range filter (by sent_at) */}
-          <div className="flex flex-wrap items-center gap-3 py-4 border-b border-slate-200 mb-4a">
+          <div className="flex flex-wrap items-center gap-3 py-4 border-b border-slate-200 mb-4">
             <span className="text-sm font-medium text-slate-700">
               Date range
             </span>

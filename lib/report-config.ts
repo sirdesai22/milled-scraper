@@ -12,7 +12,7 @@ export const DEFAULT_REPORT_CONFIG = {
     { title: "Iconic Silhouette Heritage", tags: "Samba • Legacy Lives On • Lifestyle-first" },
     { title: "Athlete & Sports", tags: "Inter Miami • FIFA • Signature drops" },
     { title: "Brand Collaborations", tags: "Disney • Wales Bonner • Minecraft" },
-    { title: "adiClub & Member Exclusives", tags: "Early access • 35% members • App push" },
+    { title: "Club & Member Exclusives", tags: "Early access • 35% members • App push" },
   ],
   subjectLines: {
     summary: "35–55 chars • Urgency • Sale/Discount • Product names front-loaded",
