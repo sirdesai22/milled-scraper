@@ -11,9 +11,9 @@ import { sendJobLog } from "./app-logs";
 import { ensureMilledLoggedIn } from "./milled-login";
 import type { Page } from "playwright";
 
-const MAX_EMAILS_TO_SCRAPE = 3;
-const SEARCH_PAGE_LIMIT = 100;
-const DEFAULT_MAX_PAGES = 10;
+const MAX_EMAILS_TO_SCRAPE = 5;
+const SEARCH_PAGE_LIMIT = 10;
+const DEFAULT_MAX_PAGES = 1;
 
 function log(
   jobId: string,
