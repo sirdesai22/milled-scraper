@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { ScrapeJob, Email } from "@/lib/types";
 import { EmailGrid } from "@/components/EmailGrid";
@@ -8,6 +8,22 @@ import { EmailModal } from "@/components/EmailModal";
 import { StrategyReport } from "@/components/StrategyReport";
 
 type Tab = "emails" | "strategy";
+
+function filterEmailsBySentAt(
+  emails: Email[],
+  dateFrom: string | null,
+  dateTo: string | null
+): Email[] {
+  if (!dateFrom && !dateTo) return emails;
+  return emails.filter((email) => {
+    const sentAt = email.sent_at;
+    if (!sentAt) return false;
+    const date = sentAt.slice(0, 10);
+    if (dateFrom && date < dateFrom) return false;
+    if (dateTo && date > dateTo) return false;
+    return true;
+  });
+}
 
 export default function ReportViewPage() {
   const router = useRouter();
@@ -22,6 +38,27 @@ export default function ReportViewPage() {
   const [selectedEmailIndex, setSelectedEmailIndex] = useState<number | null>(
     null
   );
+  const [dateFrom, setDateFrom] = useState<string>("");
+  const [dateTo, setDateTo] = useState<string>("");
+
+  const filteredEmails = useMemo(
+    () =>
+      filterEmailsBySentAt(
+        emails,
+        dateFrom || null,
+        dateTo || null
+      ),
+    [emails, dateFrom, dateTo]
+  );
+
+  useEffect(() => {
+    if (
+      selectedEmailIndex !== null &&
+      selectedEmailIndex >= filteredEmails.length
+    ) {
+      setSelectedEmailIndex(null);
+    }
+  }, [filteredEmails.length, selectedEmailIndex]);
 
   useEffect(() => {
     async function loadReportData() {
@@ -78,7 +115,7 @@ export default function ReportViewPage() {
   function handleNextEmail() {
     if (
       selectedEmailIndex !== null &&
-      selectedEmailIndex < emails.length - 1
+      selectedEmailIndex < filteredEmails.length - 1
     ) {
       setSelectedEmailIndex(selectedEmailIndex + 1);
     }
@@ -124,7 +161,9 @@ export default function ReportViewPage() {
                 {job.brand_name} Email Campaign Analysis
               </h1>
               <p className="text-sm text-slate-500 mt-1">
-                {emails.length} campaigns analyzed
+                {dateFrom || dateTo
+                  ? `${filteredEmails.length} of ${emails.length} campaigns`
+                  : `${emails.length} campaigns analyzed`}
                 {isAdmin && (
                   <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800">
                     Admin
@@ -148,6 +187,40 @@ export default function ReportViewPage() {
                 Back to Home
               </button>
             </div>
+          </div>
+
+          {/* Date range filter (by sent_at) */}
+          <div className="flex flex-wrap items-center gap-3 py-4 border-b border-slate-200 mb-4a">
+            <span className="text-sm font-medium text-slate-700">
+              Date range
+            </span>
+            <input
+              type="date"
+              value={dateFrom}
+              onChange={(e) => setDateFrom(e.target.value)}
+              className="rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              aria-label="From date"
+            />
+            <span className="text-slate-400">to</span>
+            <input
+              type="date"
+              value={dateTo}
+              onChange={(e) => setDateTo(e.target.value)}
+              className="rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              aria-label="To date"
+            />
+            {(dateFrom || dateTo) && (
+              <button
+                type="button"
+                onClick={() => {
+                  setDateFrom("");
+                  setDateTo("");
+                }}
+                className="text-sm text-slate-600 hover:text-slate-900"
+              >
+                Clear filter
+              </button>
+            )}
           </div>
 
           {/* Tab Navigation */}
@@ -185,14 +258,17 @@ export default function ReportViewPage() {
       {/* Content */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 py-8">
         {activeTab === "emails" && (
-          <EmailGrid emails={emails} onEmailClick={handleEmailClick} />
+          <EmailGrid
+            emails={filteredEmails}
+            onEmailClick={handleEmailClick}
+          />
         )}
 
         {activeTab === "strategy" && (
           <StrategyReport
             jobId={jobId}
-            emailCount={emails.length}
-            emails={emails}
+            emailCount={filteredEmails.length}
+            emails={filteredEmails}
             onEmailClick={handleEmailClick}
             isAdmin={isAdmin}
           />
@@ -200,11 +276,11 @@ export default function ReportViewPage() {
       </main>
 
       {/* Email Modal */}
-      {selectedEmailIndex !== null && (
+      {selectedEmailIndex !== null && selectedEmailIndex < filteredEmails.length && (
         <EmailModal
-          email={emails[selectedEmailIndex]}
+          email={filteredEmails[selectedEmailIndex]}
           currentIndex={selectedEmailIndex}
-          totalEmails={emails.length}
+          totalEmails={filteredEmails.length}
           onClose={handleCloseModal}
           onPrevious={handlePreviousEmail}
           onNext={handleNextEmail}
