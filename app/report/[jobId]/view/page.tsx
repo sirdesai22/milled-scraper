@@ -265,6 +265,7 @@ export default function ReportViewPage() {
       >
         {activeTab === "emails" && (
           <EmailFlowCanvas
+            jobId={jobId}
             emails={filteredEmails}
             onEmailClick={handleEmailClick}
           />
