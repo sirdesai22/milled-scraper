@@ -1,6 +1,7 @@
 "use client";
 
 import { Email } from "@/lib/types";
+import { getPreviewSnippet } from "@/lib/email-utils";
 
 interface EmailExampleThumbnailProps {
   email: Email;
@@ -26,8 +27,14 @@ export function EmailExampleThumbnail({ email, onClick }: EmailExampleThumbnailP
         <div className="absolute inset-0 bg-black/0 group-hover:bg-black/5 transition-colors" />
       </div>
       <div className="p-2 border-t border-slate-200">
+        <p className="text-xs font-medium text-slate-500 uppercase tracking-wide mb-0.5">
+          Subject
+        </p>
         <p className="text-xs font-medium text-slate-900 line-clamp-2">
           {email.email_subject || "No subject"}
+        </p>
+        <p className="text-xs text-slate-500 line-clamp-2 mt-0.5">
+          {getPreviewSnippet(email.email_html, 80)}
         </p>
       </div>
     </div>

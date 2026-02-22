@@ -1,6 +1,7 @@
 "use client";
 
 import { Email } from "@/lib/types";
+import { getPreviewSnippet } from "@/lib/email-utils";
 
 interface EmailThumbnailProps {
   email: Email;
@@ -48,7 +49,10 @@ export function EmailThumbnail({ email, onClick }: EmailThumbnailProps) {
         <h3 className="text-sm font-medium text-slate-900 line-clamp-2 mb-1">
           {email.email_subject || "No subject"}
         </h3>
-        <p className="text-xs text-slate-500">
+        <p className="text-xs text-slate-500 line-clamp-2 mb-1">
+          {getPreviewSnippet(email.email_html)}
+        </p>
+        <p className="text-xs text-slate-400">
           {email.sent_at
             ? new Date(email.sent_at).toLocaleDateString("en-US", {
                 month: "short",
