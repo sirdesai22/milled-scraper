@@ -9,16 +9,19 @@ export type EmailNodeData = {
   email: Email;
   onOpen: () => void;
   width?: number;
+  showFullEmail?: boolean;
 };
 
 export type EmailFlowNode = Node<EmailNodeData, "email">;
 
 const DEFAULT_NODE_WIDTH = 420;
-const NODE_HEIGHT = 960;
+const NODE_HEIGHT_CARD = 960;
+const NODE_HEIGHT_FULL = 3600;
 
 function EmailNodeComponent({ data }: NodeProps<EmailFlowNode>) {
-  const { email, onOpen, width } = data;
+  const { email, onOpen, width, showFullEmail } = data;
   const nodeWidth = width ?? DEFAULT_NODE_WIDTH;
+  const nodeHeight = showFullEmail ? NODE_HEIGHT_FULL : NODE_HEIGHT_CARD;
   const preview = getPreviewSnippet(email.email_html, 120);
   const sentAt = email.sent_at
     ? new Date(email.sent_at).toLocaleDateString("en-US", {
@@ -35,7 +38,7 @@ function EmailNodeComponent({ data }: NodeProps<EmailFlowNode>) {
   return (
     <div
       className="bg-white rounded-xl border-2 border-slate-200 shadow-lg overflow-hidden flex flex-col"
-      style={{ width: nodeWidth, height: NODE_HEIGHT }}
+      style={{ width: nodeWidth, height: nodeHeight }}
     >
       <div className="email-node-drag-handle p-3 border-b border-slate-200 bg-slate-50 shrink-0 cursor-grab active:cursor-grabbing">
         <p className="text-xs font-medium text-slate-500 uppercase tracking-wide mb-0.5">
@@ -63,9 +66,12 @@ function EmailNodeComponent({ data }: NodeProps<EmailFlowNode>) {
         <iframe
           title={`Email: ${email.email_subject || "No subject"}`}
           srcDoc={email.email_html}
-          className="w-full border-0 min-h-[800px]"
+          className="w-full border-0"
           sandbox="allow-same-origin"
-          style={{ height: "100%", minHeight: 600 }}
+          style={{
+            height: "100%",
+            minHeight: showFullEmail ? NODE_HEIGHT_FULL - 200 : 600,
+          }}
         />
       </div>
     </div>
