@@ -32,6 +32,12 @@ export const DEFAULT_REPORT_CONFIG = {
     email: "SFMC",
     sms: "SFMC",
   },
+  designLayout: {
+    summary: "Single-column • Hero image • Clear CTA placement • Mobile-first",
+  },
+  voiceStorytelling: {
+    summary: "Direct tone • Benefit-led • Urgency language • Brand voice consistent",
+  },
   popups: {
     primary: "Log in / Sign up • Social sign-in • Member benefits",
     secondary: "No secondary popups",
@@ -45,5 +51,7 @@ export type ReportConfig = {
   cadence: ReadonlyArray<{ label: string; desc: string }>;
   offers: { summary: string };
   techStack: { email: string; sms: string };
+  designLayout: { summary: string };
+  voiceStorytelling: { summary: string };
   popups: { primary: string; secondary: string };
 };

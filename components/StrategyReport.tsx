@@ -139,6 +139,50 @@ export function StrategyReport({
         </div>
       </section>
 
+      {/* Tech Stack */}
+      <section className="bg-white rounded-xl border border-slate-200 p-6">
+        <h2 className="text-2xl font-bold text-slate-900 mb-4">
+          Tech Stack
+        </h2>
+        <div className="flex flex-wrap gap-2">
+          {isAdmin ? (
+            <>
+              <input
+                type="text"
+                value={config.techStack.email}
+                onChange={(e) =>
+                  updateConfig("techStack", {
+                    ...config.techStack,
+                    email: e.target.value,
+                  })
+                }
+                className="rounded-lg bg-slate-50 border border-slate-300 px-4 py-2 text-sm font-medium focus:ring-2 focus:ring-blue-500 focus:outline-none"
+              />
+              <input
+                type="text"
+                value={config.techStack.sms}
+                onChange={(e) =>
+                  updateConfig("techStack", {
+                    ...config.techStack,
+                    sms: e.target.value,
+                  })
+                }
+                className="rounded-lg bg-slate-50 border border-slate-300 px-4 py-2 text-sm font-medium focus:ring-2 focus:ring-blue-500 focus:outline-none"
+              />
+            </>
+          ) : (
+            <>
+              <span className="rounded-lg bg-slate-100 px-4 py-2 text-sm font-medium text-slate-700">
+                Email: {config.techStack.email}
+              </span>
+              <span className="rounded-lg bg-slate-100 px-4 py-2 text-sm font-medium text-slate-700">
+                SMS: {config.techStack.sms}
+              </span>
+            </>
+          )}
+        </div>
+      </section>
+
       {/* Themes */}
       <section className="bg-white rounded-xl border border-slate-200 p-6">
         <h2 className="text-2xl font-bold text-slate-900 mb-4">
@@ -326,46 +370,48 @@ export function StrategyReport({
         </div>
       </section>
 
-      {/* Tech Stack */}
+      {/* Design & Layout Choices */}
       <section className="bg-white rounded-xl border border-slate-200 p-6">
         <h2 className="text-2xl font-bold text-slate-900 mb-4">
-          Tech Stack
+          Design & Layout Choices
         </h2>
-        <div className="flex flex-wrap gap-2">
+        <div className="space-y-4">
           {isAdmin ? (
-            <>
-              <input
-                type="text"
-                value={config.techStack.email}
-                onChange={(e) =>
-                  updateConfig("techStack", {
-                    ...config.techStack,
-                    email: e.target.value,
-                  })
-                }
-                className="rounded-lg bg-slate-50 border border-slate-300 px-4 py-2 text-sm font-medium focus:ring-2 focus:ring-blue-500 focus:outline-none"
-              />
-              <input
-                type="text"
-                value={config.techStack.sms}
-                onChange={(e) =>
-                  updateConfig("techStack", {
-                    ...config.techStack,
-                    sms: e.target.value,
-                  })
-                }
-                className="rounded-lg bg-slate-50 border border-slate-300 px-4 py-2 text-sm font-medium focus:ring-2 focus:ring-blue-500 focus:outline-none"
-              />
-            </>
+            <input
+              type="text"
+              value={config.designLayout.summary}
+              onChange={(e) =>
+                updateConfig("designLayout", { summary: e.target.value })
+              }
+              className="w-full text-sm bg-slate-50 border border-slate-300 rounded px-3 py-2 text-slate-600 focus:ring-2 focus:ring-blue-500 focus:outline-none"
+            />
           ) : (
-            <>
-              <span className="rounded-lg bg-slate-100 px-4 py-2 text-sm font-medium text-slate-700">
-                Email: {config.techStack.email}
-              </span>
-              <span className="rounded-lg bg-slate-100 px-4 py-2 text-sm font-medium text-slate-700">
-                SMS: {config.techStack.sms}
-              </span>
-            </>
+            <p className="text-sm text-slate-600">
+              {config.designLayout.summary}
+            </p>
+          )}
+        </div>
+      </section>
+
+      {/* Voice and Storytelling Observations */}
+      <section className="bg-white rounded-xl border border-slate-200 p-6">
+        <h2 className="text-2xl font-bold text-slate-900 mb-4">
+          Voice and Storytelling Observations
+        </h2>
+        <div className="space-y-4">
+          {isAdmin ? (
+            <input
+              type="text"
+              value={config.voiceStorytelling.summary}
+              onChange={(e) =>
+                updateConfig("voiceStorytelling", { summary: e.target.value })
+              }
+              className="w-full text-sm bg-slate-50 border border-slate-300 rounded px-3 py-2 text-slate-600 focus:ring-2 focus:ring-blue-500 focus:outline-none"
+            />
+          ) : (
+            <p className="text-sm text-slate-600">
+              {config.voiceStorytelling.summary}
+            </p>
           )}
         </div>
       </section>
