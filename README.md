@@ -33,17 +33,41 @@ npm install
 
 ### 2. Set Up Supabase
 
-1. Create a new project at [supabase.com](https://supabase.com)
-2. Go to the SQL Editor and run the schema from `supabase-schema.sql`
-3. Get your project URL and service role key from Settings → API
+Supabase stores scrape jobs, email HTML, report config, and lead captures.
+
+1. **Create a project** at [supabase.com](https://supabase.com) → New project.
+2. **Apply the schema** using one of these methods:
+   - **Option A – Supabase CLI** (recommended if you use the CLI):
+     ```bash
+     npx supabase link --project-ref YOUR_PROJECT_REF
+     npx supabase db push
+     ```
+   - **Option B – SQL Editor**: In the Supabase dashboard, go to **SQL Editor** → New query, paste the contents of `supabase/migrations/20250601000000_milled_final.sql`, then Run.
+3. **Get credentials**: Go to **Settings → API**.
+   - **Project URL** → use as `SUPABASE_URL`
+   - **Service role key** (secret) → use as `SUPABASE_SERVICE_ROLE_KEY`  
+   The app uses the service role so it can read/write all tables; RLS is enabled on `job_logs` for future auth.
 
 ### 3. Set Up Trigger.dev
 
 1. Create an account at [trigger.dev](https://trigger.dev)
 2. Create a new project
-3. Get your secret key from the project settings
+3. Get your **Project ref** and **Secret key** from the project settings
 
-### 4. Configure Environment Variables
+### 4. Set Up Oxylabs (optional)
+
+[Oxylabs Web Unblocker](https://oxylabs.io/products/web-unblocker) is used as a proxy to help get past Cloudflare and other bot protection when scraping milled.com. It is only used when **not** using Browser Use Cloud (i.e. when `BROWSER_USE_API_KEY` is unset).
+
+1. Sign up at [oxylabs.io](https://oxylabs.io) and subscribe to **Web Unblocker** (or start a trial).
+2. In [Dashboard → Proxy](https://dashboard.oxylabs.io), get your **Username** and **Password** for Web Unblocker.
+3. Add to `.env.local` (and to your Trigger.dev project env for deployed tasks):
+   - `OXYLABS_PROXY_USERNAME` – your Oxylabs username  
+   - `OXYLABS_PROXY_PASSWORD` – your Oxylabs password  
+   - `OXYLABS_PROXY_SERVER` – optional; defaults to `https://unblock.oxylabs.io:60000` if omitted.
+
+If these are not set, scraping runs without a proxy (stealth Playwright only). For best success against Cloudflare, use either Oxylabs or Browser Use Cloud.
+
+### 5. Configure Environment Variables
 
 Copy `.env.example` to `.env.local` and fill in your credentials:
 
@@ -54,12 +78,34 @@ cp .env.example .env.local
 Edit `.env.local`:
 
 ```env
+# Required
 SUPABASE_URL=your_supabase_project_url
 SUPABASE_SERVICE_ROLE_KEY=your_supabase_service_role_key
+TRIGGER_PROJECT_REF=proj_xxxxxxxxxxxxxxxxxxxxxxxx
 TRIGGER_SECRET_KEY=your_trigger_secret_key
+
+# Run view / logs (Trigger tasks send logs to the app)
+APP_URL=http://localhost:3000
+LOG_SECRET=your_shared_secret_for_log_endpoint
+
+# Optional – Browser Use Cloud (CDP browsers; when set, Oxylabs is not used)
+BROWSER_USE_API_KEY=
+
+# Optional – Oxylabs Web Unblocker (proxy for Cloudflare bypass when not using Browser Use)
+OXYLABS_PROXY_USERNAME=
+OXYLABS_PROXY_PASSWORD=
+# OXYLABS_PROXY_SERVER=https://unblock.oxylabs.io:60000
+
+# Optional – Auth (defaults: admin@gmail.com / admin@123)
+ADMIN_EMAIL=admin@gmail.com
+ADMIN_PASSWORD=admin@123
+
+# Optional – Milled Pro (for date range and full archive)
+MILLED_PRO_EMAIL=
+MILLED_PRO_PASSWORD=
 ```
 
-### 5. Run the Development Servers
+### 6. Run the Development Servers
 
 Start Trigger.dev dev server (in one terminal):
 
@@ -101,7 +147,7 @@ Open [http://localhost:3000](http://localhost:3000) in your browser.
 │   ├── playwright-browser.ts   # Browser middleware with stealth config
 │   ├── scrape-brand.ts         # Parent task (search page)
 │   └── scrape-email.ts         # Child task (email pages)
-├── supabase-schema.sql          # Database schema
+├── supabase/migrations/         # Database migrations (run via supabase db push)
 ├── trigger.config.ts            # Trigger.dev configuration
 └── .env.example                 # Environment variables template
 ```
@@ -117,6 +163,7 @@ When `BROWSER_USE_API_KEY` is set, scraping uses [Browser Use Cloud](https://doc
 ## Anti-Bot Detection Features
 
 - **Browser Use Cloud** (optional): Cloud browsers via CDP when `BROWSER_USE_API_KEY` is set.
+- **Oxylabs Web Unblocker** (optional): Proxy for Cloudflare bypass when using local Playwright; set `OXYLABS_PROXY_USERNAME` and `OXYLABS_PROXY_PASSWORD`.
 - Stealth Playwright configuration (when not using Browser Use).
 - Human-like random delays (1-5 seconds).
 - Realistic viewport and browser settings.
@@ -125,22 +172,35 @@ When `BROWSER_USE_API_KEY` is set, scraping uses [Browser Use Cloud](https://doc
 
 ## Database Schema
 
+Tables are created by the migration in `supabase/migrations/20250601000000_milled_final.sql`.
+
 ### scrape_jobs
 - `id` (UUID) - Primary key
 - `brand_name` (TEXT) - Brand being scraped
-- `status` (TEXT) - pending/running/completed/failed
+- `status` (TEXT) - pending / running / completed / failed
 - `total_emails` (INTEGER) - Total emails found
 - `scraped_emails` (INTEGER) - Successfully scraped
 - `created_at` (TIMESTAMPTZ) - Job creation time
+- `trigger_run_id` (TEXT) - Trigger.dev run id for dashboard links
 
 ### emails
 - `id` (UUID) - Primary key
 - `job_id` (UUID) - Foreign key to scrape_jobs
 - `brand_name` (TEXT) - Brand name
-- `email_url` (TEXT, UNIQUE) - URL of the email
+- `email_url` (TEXT) - URL of the email
 - `email_subject` (TEXT) - Email subject line
 - `email_html` (TEXT) - Full HTML content including shadow DOM
 - `scraped_at` (TIMESTAMPTZ) - Scrape timestamp
+- `sent_at` (TIMESTAMPTZ) - When the campaign was sent (from Milled)
+
+### job_logs
+- Log entries per job for the run view (Trigger.dev-style). RLS enabled.
+
+### report_leads
+- Captured emails (email + job_id unique) for lead-magnet report access.
+
+### report_config
+- Editable strategy report content per job (JSONB), admin-only.
 
 ## Deployment
 
